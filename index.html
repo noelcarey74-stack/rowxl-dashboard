@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>RowXL — Coach Inbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Config passed safely via JSON -->
+  <script id="rowxl-config" type="application/json">{
+    "SUPABASE_URL": "https://juqfwsodydmmzcavkqtd.supabase.co",
+    "SUPABASE_ANON": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1cWZ3c29keWRtbXpjYXZrcXRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzMTQ0MzQsImV4cCI6MjA3Mzg5MDQzNH0.SgqigCRKmixjT2nd_z4mOZMXzZ0AqAcn0L7FYO5c3Wo",
+    "COACH_SECRET": "abc1234"
+  }</script>
+
+  <style>
+    :root{ --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb; --muted:#9fb5d1; --outline:#1e3a5f; }
+    *{ box-sizing:border-box }
+    body{ margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif }
+    .wrap{ max-width:1200px; margin:40px auto; padding:0 20px }
+    h1{ margin:0 0 18px; font-size:28px }
+    .panel{ background:var(--panel); border:1px solid var(--outline); border-radius:10px; padding:14px }
+    .controls{ display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin-bottom:14px }
+    .field{ display:flex; flex-direction:column; min-width:140px }
+    label{ font-size:12px; color:var(--muted); margin:0 0 4px }
+    input,select,button,textarea{ background:var(--panel2); color:var(--text); border:1px solid var(--outline); border-radius:8px; padding:8px 10px; outline:none }
+    input::placeholder,textarea::placeholder{ color:#7fa1cc }
+    button{ cursor:pointer }
+    .btn{ padding:8px 10px; border:1px solid var(--outline); border-radius:8px; text-decoration:none; color:#e9f0fb; background:transparent }
+    .btn.primary{ background:#0e3a73; border-color:#205b9a }
+    .btn.danger{ border-color:#7a2b2b; background:#3b1d1d }
+    .btn.ghost{ opacity:.85 }
+    .btn.small{ padding:6px 8px; font-size:12px }
+    .section-title{ margin:24px 0 10px; font-size:20px; color:#dbe8ff }
+
+    /* Tables */
+    table{ width:100%; border-collapse:collapse; overflow:hidden; border-radius:10px; table-layout:fixed }
+    th,td{ padding:12px 10px; border-bottom:1px solid var(--outline); vertical-align:middle; overflow:hidden; white-space:nowrap; text-overflow:ellipsis }
+    th{ background:#0e294c; text-align:left; color:#cfe2ff; font-weight:600 }
+    tr:hover td{ background:#0e2543 }
+    .ellipsis{ overflow:hidden; white-space:nowrap; text-overflow:ellipsis }
+    .nowrap{ white-space:nowrap }
+    .empty{ color:var(--muted); padding:18px }
+    .row-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+    .note{ width:200px; height:46px; resize:vertical }
+
+    .pill{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--outline); color:#b8d2ff }
+    .pill.done{ background:#113e22; border-color:#1d5a38; color:#bff3d3 }
+    .pill.warn{ background:#3a2a12; border-color:#6a4a1a; color:#ffd7a8 }
+    .pill.err{ background:#3b1d1d; border-color:#7a2b2b; color:#ffc7c7 }
+
+    .toast{ position:fixed; right:14px; bottom:14px; background:#113057; border:1px solid var(--outline); padding:10px 12px; border-radius:10px; display:none }
+
+    @media (max-width: 1020px){
+      .note{ width:160px }
+      .row-actions{ gap:6px }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>RowXL — Coach Inbox</h1>
+
+    <!-- ===== Inbox (videos to review) ===== -->
+    <div class="panel" aria-labelledby="inboxTitle">
+      <div id="inboxTitle" class="help" style="margin-bottom:8px">
+        Queue videos and generate a report immediately (saved to Storage + DB).
+      </div>
+      <div class="controls">
+        <div class="field">
+          <label for="boatFilter">Boat filter</label>
+          <select id="boatFilter"><option value="all">All boats</option></select>
+        </div>
+        <div class="field" style="min-width:220px">
+          <label for="searchInput">Search</label>
+          <input id="searchInput" placeholder="Filename or user id…" />
+        </div>
+        <div class="field">
+          <label for="coachInput">Coach</label>
+          <input id="coachInput" placeholder="Your name" />
+        </div>
+        <div class="field">
+          <label for="limitSelect">Limit</label>
+          <select id="limitSelect"><option>10</option><option selected>20</option><option>40</option><option>80</option></select>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button id="refreshBtn" class="btn primary">Refresh</button>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <label style="display:flex;gap:8px;align-items:center">
+            <input id="autoDeleteChk" type="checkbox" />
+            <span class="nowrap">Delete clip after report</span>
+          </label>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <label style="display:flex;gap:8px;align-items:center">
+            <input id="autoShareChk" type="checkbox" />
+            <span class="nowrap">Auto-share to athlete</span>
+          </label>
+        </div>
+      </div>
+
+      <table id="jobs" aria-describedby="inboxTitle">
+        <thead>
+          <tr>
+            <th style="width:38%">Video</th>
+            <th style="width:12%">Boat</th>
+            <th style="width:14%">Status</th>
+            <th style="width:18%">Created</th>
+            <th style="width:18%">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr><td class="empty" colspan="5">No videos yet.</td></tr>
+        </tbody>
+      </table>
+      <div class="hint" style="margin-top:8px">“Generate report” calls <code>coach-generate-report</code> and embeds the video link inside the report.</div>
+    </div>
+
+    <!-- ===== Saved Reports ===== -->
+    <h2 class="section-title">Saved Reports</h2>
+    <div class="panel">
+      <div class="controls" style="justify-content:space-between;gap:12px;align-items:flex-end">
+        <div class="field">
+          <label>&nbsp;</label>
+          <button id="loadReportsBtn" class="btn">Load reports</button>
+        </div>
+        <div class="field">
+          <label style="display:flex;gap:8px;align-items:center">
+            <input id="freshLinksChk" type="checkbox" />
+            <span>Re-sign links (fresh=1)</span>
+          </label>
+        </div>
+        <div class="field" style="flex:1; min-width:260px">
+          <label for="defaultAthlete">Default Athlete UUID (optional)</label>
+          <input id="defaultAthlete" placeholder="d64ae833-ed5e-47ff-a43b-5ffa#..." />
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <span id="reportsHint" class="help">Names appear via DB view join. Use “Fix Athlete” if missing.</span>
+        </div>
+      </div>
+
+      <table id="reportsTable">
+        <colgroup>
+          <col style="width:28%"><col style="width:18%"><col style="width:18%">
+          <col style="width:10%"><col style="width:14%"><col style="width:12%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Athlete</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="reportsRows">
+          <tr><td class="empty" colspan="6">No reports loaded.</td></tr>
+        </tbody>
+      </table>
+      <div id="missingFnWarn" class="danger-text" style="display:none;margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    /* ===== CONFIG ===== */
+    function getConfig(key, fallback){
+      try{
+        const el = document.getElementById('rowxl-config');
+        const json = el ? JSON.parse(el.textContent||'{}') : {};
+        return json[key] ?? fallback;
+      }catch{ return fallback; }
+    }
+    const SUPABASE_URL  = getConfig('SUPABASE_URL',  '');
+    const SUPABASE_ANON = getConfig('SUPABASE_ANON', '');
+    const COACH_SECRET  = getConfig('COACH_SECRET',  '');
+
+    const DEFAULT_COACH = 'Noel';
+    const BOATS = ['8+','4+','4x','4x-','4-','2x','2-','1x'];
+
+    const $ = s => document.querySelector(s);
+    const toast = (msg, ok=true) => {
+      const t = $('#toast'); if (!t) return;
+      t.textContent = msg; t.style.display = 'block';
+      t.style.borderColor = ok ? '#1d5a38' : '#8b2a2a';
+      clearTimeout(t._hide);
+      t._hide = setTimeout(()=> t.style.display = 'none', 2400);
+    };
+    const prettyDate = iso => iso ? new Date(iso).toLocaleString() : '—';
+    const by = key => (a,b) => (a[key]||'') < (b[key]||'') ? 1 : -1; // desc
+    const ellipDiv = txt => { const d=document.createElement('div'); d.className='ellipsis'; d.title=txt||''; d.textContent=txt||'—'; return d; };
+
+    /* Seed coach + boats */
+    const coachInput = $('#coachInput'); coachInput.value = DEFAULT_COACH;
+    const boatFilter = $('#boatFilter'); ['all',...BOATS].forEach(b=>{const o=document.createElement('option'); o.value=b; o.textContent=(b==='all'?'All boats':b); boatFilter.appendChild(o);});
+
+    /* ===== Edge function helpers ===== */
+    async function _fetchAndExplain(url, init, label){
+      const res = await fetch(url, init);
+      if (!res.ok) {
+        const text = await res.text().catch(()=> '');
+        if (res.status === 404) {
+          const warn = document.getElementById('missingFnWarn');
+          if (warn) { warn.style.display='block'; warn.textContent = `Missing Edge Function “${label}” at ${url}. Deploy with: supabase functions deploy ${label}`; }
+        }
+        throw new Error(`${label} error ${res.status}: ${text || 'Unknown error'}`);
+      }
+      return res.json();
+    }
+
+    async function fetchInbox(limit=20){
+      const url = `${SUPABASE_URL}/functions/v1/coach-inbox`;
+      return _fetchAndExplain(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'x-coach-secret': COACH_SECRET
+        },
+        body: JSON.stringify({ limit })
+      }, 'coach-inbox');
+    }
+
+    async function generateReportDirect({ coach_name, coach_notes, boat, video_url, file_path, auto_share=false, delete_on_finish=false }){
+      const url = `${SUPABASE_URL}/functions/v1/coach-generate-report`;
+      return _fetchAndExplain(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'x-coach-secret': COACH_SECRET
+        },
+        body: JSON.stringify({ coach_name, coach_notes, boat, video_url, file_path, auto_share, delete_on_finish })
+      }, 'coach-generate-report');
+    }
+
+    async function deleteVideo(path){
+      const url = `${SUPABASE_URL}/functions/v1/coach-delete-video`;
+      return _fetchAndExplain(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'x-coach-secret': COACH_SECRET
+        },
+        body: JSON.stringify({ path })
+      }, 'coach-delete-video');
+    }
+
+    async function listReports(limit=200, fresh=false){
+      const url = `${SUPABASE_URL}/functions/v1/coach-list-reports?limit=${limit}${fresh ? '&fresh=1':''}`;
+      return _fetchAndExplain(url, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${SUPABASE_ANON}`, 'x-coach-secret': COACH_SECRET }
+      }, 'coach-list-reports');
+    }
+
+    async function shareReport({ athlete_user_id, title, url, report_id }){
+      const ep = `${SUPABASE_URL}/functions/v1/coach-share-report`;
+      return _fetchAndExplain(ep, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'x-coach-secret': COACH_SECRET
+        },
+        body: JSON.stringify({ athlete_user_id, title, url, report_id })
+      }, 'coach-share-report');
+    }
+
+    async function fixAthlete({ report_id, athlete_user_id }){
+      const ep = `${SUPABASE_URL}/functions/v1/coach-fix-athlete`;
+      return _fetchAndExplain(ep, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'x-coach-secret': COACH_SECRET
+        },
+        body: JSON.stringify({ report_id, athlete_user_id })
+      }, 'coach-fix-athlete');
+    }
+
+    /* ===== Inbox rendering ===== */
+    let _inboxCache = [];
+    const statusClass = (t='')=>{
+      const s=t.toLowerCase();
+      if (s.includes('error')||s.includes('fail')) return 'pill err';
+      if (s.includes('queued')||s.includes('new')) return 'pill';
+      if (s.includes('sent')||s.includes('done')||s.includes('report')) return 'pill done';
+      if (s.includes('processing')) return 'pill warn';
+      return 'pill';
+    };
+
+    function renderRows(items){
+      const tbody = $('#rows');
+      tbody.innerHTML = '';
+      if (!items?.length){
+        tbody.innerHTML = `<tr><td class="empty" colspan="5">No videos yet.</td></tr>`;
+        return;
+      }
+      for (const it of items.slice().sort(by('created_at'))){
+        const tr = document.createElement('tr');
+
+        const videoCell = document.createElement('td');
+        const name = (it.path || it.video_path || '').split('/').pop() || it.id || 'video';
+        const openUrl = it.signed_url || it.signedUrl || it.url || it.video_path;
+        videoCell.appendChild(ellipDiv(name));
+
+        const boatCell = document.createElement('td');
+        const boatSel = document.createElement('select');
+        boatSel.innerHTML = `<option value="">—</option>` + BOATS.map(b=>`<option>${b}</option>`).join('');
+        boatSel.value = it.boat || '';
+        boatCell.appendChild(boatSel);
+
+        const statusCell = document.createElement('td');
+        const pill = document.createElement('span');
+        pill.className = statusClass(it.job_status || it.status || 'new');
+        pill.textContent = it.job_status || it.status || 'new';
+        statusCell.appendChild(pill);
+
+        const createdCell = document.createElement('td');
+        createdCell.textContent = prettyDate(it.created_at || it.uploaded_at);
+
+        const actionsCell = document.createElement('td'); actionsCell.className='row-actions nowrap';
+
+        const previewBtn = document.createElement('button');
+        previewBtn.className = 'btn ghost small';
+        previewBtn.textContent = 'Preview';
+        previewBtn.onclick = () => { if (!openUrl){ toast('No signed URL', false); return; } window.open(openUrl,'_blank'); };
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn ghost small';
+        copyBtn.textContent = 'Copy path';
+        copyBtn.onclick = async ()=>{ try{ await navigator.clipboard.writeText(it.path||''); toast('Path copied ✔'); }catch{ toast('Copy failed', false); } };
+
+        const note = document.createElement('textarea'); note.className='note'; note.placeholder='Coach notes…';
+
+        const sendBtn = document.createElement('button');
+        sendBtn.className = 'btn primary small';
+        sendBtn.textContent = 'Generate report';
+        sendBtn.onclick = async ()=>{
+          const coach = (coachInput.value||'').trim(); const boat = boatSel.value||''; const text=(note.value||'').trim();
+          if (!coach) return toast('Enter coach name', false);
+          if (!text)  return toast('Add notes', false);
+          if (!openUrl) return toast('No signed video URL', false);
+          sendBtn.disabled=true; sendBtn.textContent='Generating…';
+          try{
+            const r = await generateReportDirect({ coach_name:coach, coach_notes:text, boat, video_url:openUrl, file_path:it.path, auto_share:false, delete_on_finish:false });
+            if (r?.ok){ pill.className='pill done'; pill.textContent='report'; toast('Report saved ✔'); }
+            else throw new Error(r?.error||'Failed');
+          }catch(e){ toast(e.message||'Error', false); }
+          finally{ sendBtn.disabled=false; sendBtn.textContent='Generate report'; }
+        };
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn danger small';
+        delBtn.textContent = 'Delete';
+        delBtn.onclick = async ()=>{
+          if (!confirm(`Delete clip "${name}" from storage?`)) return;
+          delBtn.disabled=true; delBtn.textContent='Deleting…';
+          try{ await deleteVideo(it.path); tr.remove(); toast('Video deleted'); }
+          catch(e){ toast(e.message||'Delete failed', false); }
+          finally{ delBtn.disabled=false; delBtn.textContent='Delete'; }
+        };
+
+        actionsCell.append(previewBtn, copyBtn, note, sendBtn, delBtn);
+        tr.append(videoCell, boatCell, statusCell, createdCell, actionsCell);
+        tbody.appendChild(tr);
+      }
+    }
+
+    /* ===== Saved reports rendering (robust) ===== */
+    function normalizeReportItem(raw){
+      // Accepts either a string (URL) or an object with various fields
+      if (typeof raw === 'string') {
+        return { id:null, title: raw.split('/').slice(-1)[0], saved_url: raw, public_url: raw, created_at:null,
+                 athlete_user_id:null, athlete_name:null, athlete_email:null, status:'done' };
+      }
+      const title = (raw?.title || raw?.saved_url || raw?.path || '').split('/').slice(-1)[0] || 'report';
+      return {
+        id: raw?.id ?? null,
+        title,
+        saved_url: raw?.saved_url ?? null,
+        public_url: raw?.public_url ?? null,
+        path: raw?.path ?? null,
+        created_at: raw?.created_at ?? null,
+        status: raw?.status || 'done',
+        athlete_user_id: raw?.athlete_user_id ?? null,
+        athlete_name: raw?.athlete_name ?? null,
+        athlete_email: raw?.athlete_email ?? null,
+      };
+    }
+
+    async function loadInbox(){
+      try{
+        $('#rows').innerHTML = `<tr><td class="empty" colspan="5">Loading…</td></tr>`;
+        const limit = Number($('#limitSelect').value || 20);
+        const data  = await fetchInbox(limit);
+        _inboxCache = data?.items || [];
+        renderRows(_inboxCache);
+      }catch(e){
+        $('#rows').innerHTML = `<tr><td class="empty" colspan="5">Error loading inbox.</td></tr>`;
+        toast(e?.message || 'Failed to load inbox', false);
+      }
+    }
+
+    function renderReports(items){
+      const tbody = $('#reportsRows');
+      tbody.innerHTML = '';
+      const normalized = (items||[]).map(normalizeReportItem);
+      if (!normalized.length){
+        tbody.innerHTML = `<tr><td class="empty" colspan="6">No reports found.</td></tr>`;
+        return;
+      }
+      for (const it of normalized.slice().sort(by('created_at'))){
+        const tr = document.createElement('tr');
+
+        const titleCell   = document.createElement('td');
+        const athleteCell = document.createElement('td');
+        const emailCell   = document.createElement('td');
+        const statusCell  = document.createElement('td');
+        const createdCell = document.createElement('td');
+        const actionsCell = document.createElement('td'); actionsCell.className = 'row-actions nowrap';
+
+        titleCell.appendChild(ellipDiv(it.title));
+        athleteCell.appendChild(ellipDiv(it.athlete_name || '—'));
+        emailCell.appendChild(ellipDiv(it.athlete_email || '—'));
+        statusCell.appendChild(ellipDiv(it.status || 'done'));
+        createdCell.appendChild(ellipDiv(prettyDate(it.created_at)));
+
+        const link = it.saved_url || it.public_url || null;
+
+        const openBtn = document.createElement('a');
+        openBtn.className = 'btn small'; openBtn.textContent = 'Open';
+        openBtn.target = '_blank'; openBtn.rel = 'noopener'; openBtn.href = link || '#';
+        if (!link) openBtn.classList.add('ghost');
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn small'; copyBtn.textContent = 'Copy link';
+        copyBtn.onclick = async ()=>{ try{
+          if (!link) throw new Error('No link'); await navigator.clipboard.writeText(link); toast('Link copied ✔');
+        }catch(e){ toast(e.message||'Copy failed', false);} };
+
+        const pdfBtn = document.createElement('button');
+        pdfBtn.className = 'btn small'; pdfBtn.textContent = 'PDF';
+        pdfBtn.onclick = ()=> downloadPDF({ title: it.title, saved_url: link, public_url: link, created_at: it.created_at, athlete_name: it.athlete_name });
+
+        const shareBtn = document.createElement('button');
+        shareBtn.className = 'btn small primary'; shareBtn.textContent = 'Share';
+        shareBtn.onclick = async ()=>{
+          const def = (document.getElementById('defaultAthlete').value||'').trim();
+          const id = it.athlete_user_id || def;
+          if (!id) return toast('Set athlete UUID (row or default).', false);
+          if (!link) return toast('No URL on this report.', false);
+          shareBtn.disabled=true; shareBtn.textContent='Sharing…';
+          try{
+            const r = await shareReport({ athlete_user_id:id, title:it.title, url:link, report_id:it.id||null });
+            if (r?.ok) toast('Shared ✔'); else throw new Error(r?.error||'Share failed');
+          }catch(e){ toast(e.message||'Share failed', false); }
+          finally{ shareBtn.disabled=false; shareBtn.textContent='Share'; }
+        };
+
+        const fixBtn = document.createElement('button');
+        fixBtn.className = 'btn small ghost'; fixBtn.textContent = 'Fix Athlete';
+        if (it.athlete_user_id){ fixBtn.disabled = true; fixBtn.title = 'Already linked'; }
+        fixBtn.onclick = async ()=>{
+          const def = (document.getElementById('defaultAthlete').value||'').trim();
+          const id = prompt('Enter athlete UUID to link to this report:', def || '');
+          if (!id || !it.id) return;
+          try{ await fixAthlete({ report_id: it.id, athlete_user_id: id }); toast('Athlete linked ✔'); fixBtn.disabled=true; athleteCell.textContent='(linked)'; }
+          catch(e){ toast(e.message||'Fix failed', false); }
+        };
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn small danger'; delBtn.textContent = 'Delete';
+        delBtn.onclick = async ()=>{
+          if (!confirm(`Delete report "${it.title}"?`)) return;
+          try{
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/coach-delete-report`, {
+              method: 'POST',
+              headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${SUPABASE_ANON}`, 'x-coach-secret': COACH_SECRET },
+              body: JSON.stringify({ id: it.id, saved_url: link, path: it.path })
+            });
+            if (!res.ok) throw new Error(await res.text());
+            tr.remove(); toast('Report deleted');
+          }catch(e){ toast(e.message||'Delete failed', false); }
+        };
+
+        actionsCell.append(openBtn, copyBtn, pdfBtn, shareBtn, fixBtn, delBtn);
+        tr.append(titleCell, athleteCell, emailCell, statusCell, createdCell, actionsCell);
+        tbody.appendChild(tr);
+      }
+    }
+
+    async function loadReports(){
+      try{
+        $('#reportsRows').innerHTML = `<tr><td class="empty" colspan="6">Loading…</td></tr>`;
+        const fresh = document.getElementById('freshLinksChk').checked;
+        const data = await listReports(200, fresh);
+        renderReports(data?.items || []);
+      }catch(e){
+        $('#reportsRows').innerHTML = `<tr><td class="empty" colspan="6">Error loading reports.</td></tr>`;
+        toast(e?.message || 'Failed to load reports', false);
+      }
+    }
+
+    async function downloadPDF(report){
+      try{
+        const url = report.saved_url || report.public_url;
+        if (!url) throw new Error('No saved URL on report.');
+        const md = await (await fetch(url)).text();
+
+        const safe = md
+          .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+          .replace(/^### (.*)$/gm,'<h3>$1</h3>')
+          .replace(/^## (.*)$/gm,'<h2>$1</h2>')
+          .replace(/^# (.*)$/gm,'<h1>$1</h1>')
+          .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g,'<em>$1</em>')
+          .replace(/\n/g,'<br/>');
+
+        const created = prettyDate(report.created_at);
+        const logo = `${SUPABASE_URL}/storage/v1/object/public/reports/branding/logo.png`;
+        const html = `
+<!doctype html><html><head><meta charset="utf-8"><title>${report.title||'RowXL Report'}</title>
+<style>
+  body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; margin:0; background:#f7fbff; }
+  .header{ background:#0a1a2f; color:#fff; padding:24px 18px; text-align:center }
+  .header img{ height:40px; display:block; margin:0 auto 8px }
+  .wrap{ max-width:800px; margin:24px auto; background:#fff; border:1px solid #e3edf7; border-radius:14px; box-shadow:0 6px 20px rgba(10,26,47,0.06) }
+  .inner{ padding:24px }
+  h1,h2,h3{ color:#0a1a2f; margin:0 0 8px }
+  .meta{ color:#335; font-size:14px; margin-bottom:12px }
+  hr{ border:0; border-top:1px solid #e5effa; margin:18px 0 }
+  @media print{ .wrap{ box-shadow:none; border:0 } body{ background:#fff } }
+</style></head><body>
+  <div class="header"><img src="${logo}" alt="RowXL"><div>Performance Coaching Report</div></div>
+  <div class="wrap"><div class="inner">
+    <h2>${(report.title||'RowXL Report').split('/').slice(-1)[0]}</h2>
+    <div class="meta">Created: ${created}</div><hr/><div>${safe}</div>
+  </div></div>
+  <script>window.onload = () => setTimeout(()=>window.print(), 300);<\/script>
+</body></html>`;
+        const win = window.open('', '_blank'); win.document.open(); win.document.write(html); win.document.close();
+      }catch(e){ toast(e.message || 'PDF failed', false); }
+    }
+
+    // Wire up
+    document.getElementById('refreshBtn').addEventListener('click', loadInbox);
+    document.getElementById('limitSelect').addEventListener('change', loadInbox);
+    document.getElementById('boatFilter').addEventListener('change', loadInbox);
+    document.getElementById('loadReportsBtn').addEventListener('click', loadReports);
+
+    // First load
+    loadInbox();
+  </script>
+</body>
+</html>
