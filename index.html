@@ -352,7 +352,12 @@
           if (!openUrl) return toast('No signed video URL', false);
           sendBtn.disabled=true; sendBtn.textContent='Generating…';
           try{
-            const r = await generateReportDirect({ coach_name:coach, coach_notes:text, boat, video_url:openUrl, file_path:it.path, auto_share:false, delete_on_finish:false });
+            const r = await generateReportDirect({
+              coach_name:coach, coach_notes:text, boat,
+              video_url:openUrl, file_path:it.path,
+              auto_share:false,                     // review first, share later
+              delete_on_finish:document.getElementById('autoDeleteChk').checked === true
+            });
             if (r?.ok){ pill.className='pill done'; pill.textContent='report'; toast('Report saved ✔'); }
             else throw new Error(r?.error||'Failed');
           }catch(e){ toast(e.message||'Error', false); }
