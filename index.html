@@ -545,9 +545,15 @@
 
         const copyBtn = document.createElement('button');
         copyBtn.className = 'btn small'; copyBtn.textContent = 'Copy link';
-        copyBtn.onclick = async ()=>{ try{
-          if (!link) throw new Error('No link'); await navigator.clipboard.writeText(link); toast('Link copied ✔');
-        }catch(e){ toast(e.message||'Copy failed', false);} };
+        copyBtn.onclick = async () => {
+  try {
+    if (!link) throw new Error('No link');
+    await navigator.clipboard.writeText(link);
+    toast('Link copied ✔');
+  } catch (e) {
+    toast(e.message || 'Copy failed', false);
+  }
+};
 
         const pdfBtn = document.createElement('button');
         pdfBtn.className = 'btn small'; pdfBtn.textContent = 'PDF';
