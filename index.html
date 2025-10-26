@@ -12,8 +12,8 @@
     "COACH_SECRET": "abc1234"
   }</script>
 
-  <!-- Supabase SDK (no integrity during testing; cache-busted) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js?v=3"></script>
+  <!-- Supabase SDK (used for storage/db calls, but not auth) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js?v=4"></script>
 
   <style>
     :root{ --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb; --muted:#9fb5d1; --outline:#1e3a5f; --brand:#0e3a73; --ok:#1d5a38; --bad:#8b2a2a }
@@ -54,34 +54,16 @@
     .toast{ position:fixed; right:14px; bottom:14px; background:#113057; border:1px solid var(--outline); padding:10px 12px; border-radius:10px; display:none }
     .topbar{ background:var(--panel); border-bottom:1px solid var(--outline); position:sticky; top:0; z-index:2 }
     .topbar-inner{ max-width:1200px; margin:0 auto; padding:10px 20px; display:flex; gap:12px; align-items:center; justify-content:space-between }
-    .authbox{ display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap }
     .tiny{ font-size:12px; color:var(--muted) }
     .badge{ font-size:12px; padding:4px 8px; border:1px solid var(--outline); border-radius:999px; background:var(--panel2) }
-
-    .hidden{ display:none !important }
-    @media (max-width: 1020px){ .note{ width:160px } .row-actions{ gap:6px } }
   </style>
 </head>
 <body>
-  <!-- Top bar / Auth -->
+  <!-- Top bar (auth removed) -->
   <div class="topbar">
     <div class="topbar-inner">
       <div><strong>RowXL</strong> <span class="tiny">Coach Inbox</span></div>
-      <div class="authbox">
-        <div id="whoami" class="tiny badge hidden"></div>
-        <div id="signinBox">
-          <div class="field" style="min-width:220px">
-            <label for="emailInput">Sign in (magic link)</label>
-            <input id="emailInput" type="email" placeholder="you@example.com" />
-          </div>
-          <div class="field" style="min-width:180px">
-            <label for="nameInput">Full name (optional)</label>
-            <input id="nameInput" type="text" placeholder="Noel Carey" />
-          </div>
-          <button id="sendLinkBtn" class="btn primary">Send link</button>
-        </div>
-        <button id="signoutBtn" class="btn danger hidden">Sign out</button>
-      </div>
+      <div class="tiny badge">Testing mode (no sign-in)</div>
     </div>
   </div>
 
@@ -90,7 +72,7 @@
 
     <!-- ===== Inbox (videos to review) ===== -->
     <div class="panel" aria-labelledby="inboxTitle">
-      <div id="inboxTitle" class="help" style="margin-bottom:8px">
+      <div id="inboxTitle" style="margin-bottom:8px">
         Queue videos and generate a report immediately (saved to Storage + DB).
       </div>
       <div class="controls">
@@ -224,86 +206,20 @@
     const by = key => (a,b) => (a[key]||'') < (b[key]||'') ? 1 : -1; // desc
     const ellipDiv = txt => { const d=document.createElement('div'); d.className='ellipsis'; d.title=txt||''; d.textContent=txt||'—'; return d; };
 
-    /* ===== Supabase client & Auth state ===== */
+    /* ===== Supabase client (no auth) ===== */
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    let session = null;
 
+    // Always send anon JWT + coach secret (testing mode)
     function authHeaders(){
-      // Prefer JWT if signed-in; else fall back to anon+coach-secret (test mode)
-      const token = session?.access_token || session?.accessToken;
-      if (token) return { 'Authorization': `Bearer ${token}` };
-      const headers = { 'Authorization': `Bearer ${SUPABASE_ANON}` };
-      if (COACH_SECRET) headers['x-coach-secret'] = COACH_SECRET;
-      return headers;
+      return {
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'x-coach-secret': COACH_SECRET
+      };
     }
-
-    async function showWhoAmI(){
-      const who = $('#whoami');
-      const signoutBtn = $('#signoutBtn');
-      const signinBox = $('#signinBox');
-      if (session?.user){
-        const { user } = session;
-        who.textContent = `Signed in: ${user.email || user.id}`;
-        who.classList.remove('hidden');
-        signoutBtn.classList.remove('hidden');
-        signinBox.classList.add('hidden');
-        // Pre-fill defaultAthlete with this user id
-        $('#defaultAthlete').value = user.id;
-      }else{
-        who.classList.add('hidden');
-        signoutBtn.classList.add('hidden');
-        signinBox.classList.remove('hidden');
-      }
-    }
-
-    async function upsertAthleteProfile({ user_id, full_name, email }){
-      try{
-        if (!user_id) return;
-        const { error } = await supabase
-          .from('athletes')
-          .upsert({ user_id, full_name: full_name || null, email: email || null }, { onConflict: 'user_id' });
-        if (error) console.warn('athlete upsert skipped:', error.message);
-      }catch(e){ console.warn('athlete upsert error', e); }
-    }
-
-    // Auth UI wiring
-    $('#sendLinkBtn').addEventListener('click', async ()=>{
-      const email = ($('#emailInput').value||'').trim();
-      const name  = ($('#nameInput').value||'').trim();
-      if (!email) return toast('Enter your email', false);
-      try{
-        const { error } = await supabase.auth.signInWithOtp({ email, options:{ emailRedirectTo: window.location.href }});
-        if (error) throw error;
-        localStorage.setItem('rowxl-name', name);
-        toast('Magic link sent. Check your inbox.');
-      }catch(e){ toast(e.message || 'Sign-in failed', false); }
-    });
-
-    $('#signoutBtn').addEventListener('click', async ()=>{
-      await supabase.auth.signOut();
-      session = null;
-      await showWhoAmI();
-      toast('Signed out');
-    });
-
-    (async ()=>{
-      const { data } = await supabase.auth.getSession();
-      session = data.session || null;
-      await showWhoAmI();
-
-      supabase.auth.onAuthStateChange(async (_evt, s) => {
-        session = s;
-        await showWhoAmI();
-        if (s?.user){
-          const cachedName = localStorage.getItem('rowxl-name') || '';
-          await upsertAthleteProfile({ user_id: s.user.id, full_name: cachedName, email: s.user.email });
-        }
-      });
-    })();
 
     /* Seed coach + boats */
-    const coachInput = $('#coachInput'); coachInput.value = DEFAULT_COACH;
-    const boatFilter = $('#boatFilter'); ['all',...BOATS].forEach(b=>{const o=document.createElement('option'); o.value=b; o.textContent=(b==='all'?'All boats':b); boatFilter.appendChild(o);});
+    const coachInput = document.getElementById('coachInput'); coachInput.value = DEFAULT_COACH;
+    const boatFilter = document.getElementById('boatFilter'); ['all',...BOATS].forEach(b=>{const o=document.createElement('option'); o.value=b; o.textContent=(b==='all'?'All boats':b); boatFilter.appendChild(o);});
 
     /* ===== Edge function helpers ===== */
     async function _fetchAndExplain(url, init, label){
@@ -384,7 +300,7 @@
     };
 
     function renderRows(items){
-      const tbody = $('#rows');
+      const tbody = document.getElementById('rows');
       tbody.innerHTML = '';
       if (!items?.length){
         tbody.innerHTML = `<tr><td class="empty" colspan="5">No videos yet.</td></tr>`;
@@ -424,12 +340,8 @@
         copyBtn.className = 'btn ghost small';
         copyBtn.textContent = 'Copy path';
         copyBtn.onclick = async () => {
-          try {
-            await navigator.clipboard.writeText(it.path||'');
-            toast('Path copied ✔');
-          } catch {
-            toast('Copy failed', false);
-          }
+          try { await navigator.clipboard.writeText(it.path||''); toast('Path copied ✔'); }
+          catch { toast('Copy failed', false); }
         };
 
         const note = document.createElement('textarea'); note.className='note'; note.placeholder='Coach notes…';
@@ -496,20 +408,20 @@
 
     async function loadInbox(){
       try{
-        $('#rows').innerHTML = `<tr><td class="empty" colspan="5">Loading…</td></tr>`;
-        const limit = Number($('#limitSelect').value || 20);
+        document.getElementById('rows').innerHTML = `<tr><td class="empty" colspan="5">Loading…</td></tr>`;
+        const limit = Number(document.getElementById('limitSelect').value || 20);
         const data  = await fetchInbox(limit);
         const items = data?.items || data?.data || [];
         _inboxCache = items;
         renderRows(_inboxCache);
       }catch(e){
-        $('#rows').innerHTML = `<tr><td class="empty" colspan="5">Error loading inbox.</td></tr>`;
+        document.getElementById('rows').innerHTML = `<tr><td class="empty" colspan="5">Error loading inbox.</td></tr>`;
         toast(e?.message || 'Failed to load inbox', false);
       }
     }
 
     function renderReports(items){
-      const tbody = $('#reportsRows');
+      const tbody = document.getElementById('reportsRows');
       tbody.innerHTML = '';
       const normalized = (items||[]).map(normalizeReportItem);
       if (!normalized.length){
@@ -542,13 +454,8 @@
         const copyBtn = document.createElement('button');
         copyBtn.className = 'btn small'; copyBtn.textContent = 'Copy link';
         copyBtn.onclick = async () => {
-          try {
-            if (!link) throw new Error('No link');
-            await navigator.clipboard.writeText(link);
-            toast('Link copied ✔');
-          } catch (e) {
-            toast(e.message || 'Copy failed', false);
-          }
+          try { if (!link) throw new Error('No link'); await navigator.clipboard.writeText(link); toast('Link copied ✔'); }
+          catch (e) { toast(e.message || 'Copy failed', false); }
         };
 
         const pdfBtn = document.createElement('button');
@@ -564,16 +471,7 @@
             const coach = (document.getElementById('coachInput')?.value || '').trim() || null;
             const def   = (document.getElementById('defaultAthlete')?.value || '').trim() || null;
             const id    = it.athlete_user_id || def || null;
-
-            const payload = {
-              athlete_user_id: id,
-              title: it.title,
-              url: link,
-              report_id: it.id || null,
-              coach_name: coach
-            };
-
-            const r = await shareReport(payload);
+            const r = await shareReport({ athlete_user_id:id, title:it.title, url:link, report_id:it.id||null, coach_name:coach });
             if (r?.ok) toast('Shared ✔'); else throw new Error(r?.error || 'Share failed');
           } catch (e) {
             toast(e.message || 'Share failed', false);
@@ -615,13 +513,13 @@
 
     async function loadReports(){
       try{
-        $('#reportsRows').innerHTML = `<tr><td class="empty" colspan="6">Loading…</td></tr>`;
+        document.getElementById('reportsRows').innerHTML = `<tr><td class="empty" colspan="6">Loading…</td></tr>`;
         const fresh = document.getElementById('freshLinksChk').checked;
         const data = await listReports(200, fresh);
         const items = data?.items || data?.data || [];
         renderReports(items);
       }catch(e){
-        $('#reportsRows').innerHTML = `<tr><td class="empty" colspan="6">Error loading reports.</td></tr>`;
+        document.getElementById('reportsRows').innerHTML = `<tr><td class="empty" colspan="6">Error loading reports.</td></tr>`;
         toast(e?.message || 'Failed to load reports', false);
       }
     }
