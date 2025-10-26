@@ -553,16 +553,30 @@
         pdfBtn.className = 'btn small'; pdfBtn.textContent = 'PDF';
         pdfBtn.onclick = ()=> downloadPDF({ title: it.title, saved_url: link, public_url: link, created_at: it.created_at, athlete_name: it.athlete_name });
 
-        const shareBtn = document.createElement('button');
-        shareBtn.className = 'btn small primary'; shareBtn.textContent = 'Share';
-        shareBtn.onclick = async ()=>{
-          const def = (document.getElementById('defaultAthlete').value||'').trim();
-          const id = it.athlete_user_id || def;
-          if (!id) return toast('Set athlete UUID (row or default).', false);
-          if (!link) return toast('No URL on this report.', false);
-          shareBtn.disabled=true; shareBtn.textContent='Sharing…';
-          try{
-            const r = await shareReport({ athlete_user_id:id, title:it.title, url:link, report_id:it.id||null });
+        shareBtn.onclick = async () => {
+  if (!link) return toast('No URL on this report.', false);
+  shareBtn.disabled = true; shareBtn.textContent = 'Sharing…';
+  try {
+    const coach = (document.getElementById('coachInput')?.value || '').trim() || null;
+    const def   = (document.getElementById('defaultAthlete')?.value || '').trim() || null;
+    const id    = it.athlete_user_id || def || null; // allow null; server will resolve
+
+    const payload = {
+      athlete_user_id: id,                 // may be null
+      title: it.title,
+      url: link,
+      report_id: it.id || null,
+      coach_name: coach
+    };
+
+    const r = await shareReport(payload);
+    if (r?.ok) toast('Shared ✔'); else throw new Error(r?.error || 'Share failed');
+  } catch (e) {
+    toast(e.message || 'Share failed', false);
+  } finally {
+    shareBtn.disabled = false; shareBtn.textContent = 'Share';
+  }
+};
             if (r?.ok || r === 'ok') toast('Shared ✔'); else throw new Error(r?.error||'Share failed');
           }catch(e){ toast(e.message||'Share failed', false); }
           finally{ shareBtn.disabled=false; shareBtn.textContent='Share'; }
