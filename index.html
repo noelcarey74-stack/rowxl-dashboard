@@ -12,9 +12,9 @@
     "COACH_SECRET": "abc1234"
   }</script>
 
-  <!-- Supabase client -->
   <!-- Supabase SDK (no integrity during testing; cache-busted) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js?v=3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js?v=3"></script>
+
   <style>
     :root{ --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb; --muted:#9fb5d1; --outline:#1e3a5f; --brand:#0e3a73; --ok:#1d5a38; --bad:#8b2a2a }
     *{ box-sizing:border-box }
@@ -36,7 +36,6 @@
     .btn.small{ padding:6px 8px; font-size:12px }
     .section-title{ margin:24px 0 10px; font-size:20px; color:#dbe8ff }
 
-    /* Tables */
     table{ width:100%; border-collapse:collapse; overflow:hidden; border-radius:10px; table-layout:fixed }
     th,td{ padding:12px 10px; border-bottom:1px solid var(--outline); vertical-align:middle; overflow:hidden; white-space:nowrap; text-overflow:ellipsis }
     th{ background:#0e294c; text-align:left; color:#cfe2ff; font-weight:600 }
@@ -60,11 +59,7 @@
     .badge{ font-size:12px; padding:4px 8px; border:1px solid var(--outline); border-radius:999px; background:var(--panel2) }
 
     .hidden{ display:none !important }
-
-    @media (max-width: 1020px){
-      .note{ width:160px }
-      .row-actions{ gap:6px }
-    }
+    @media (max-width: 1020px){ .note{ width:160px } .row-actions{ gap:6px } }
   </style>
 </head>
 <body>
@@ -264,7 +259,6 @@
     async function upsertAthleteProfile({ user_id, full_name, email }){
       try{
         if (!user_id) return;
-        // This will succeed only if your RLS allows authenticated user to upsert their own row
         const { error } = await supabase
           .from('athletes')
           .upsert({ user_id, full_name: full_name || null, email: email || null }, { onConflict: 'user_id' });
@@ -280,7 +274,6 @@
       try{
         const { error } = await supabase.auth.signInWithOtp({ email, options:{ emailRedirectTo: window.location.href }});
         if (error) throw error;
-        // store name locally; we’ll apply after session comes in
         localStorage.setItem('rowxl-name', name);
         toast('Magic link sent. Check your inbox.');
       }catch(e){ toast(e.message || 'Sign-in failed', false); }
@@ -293,7 +286,6 @@
       toast('Signed out');
     });
 
-    // Handle initial session and changes
     (async ()=>{
       const { data } = await supabase.auth.getSession();
       session = data.session || null;
@@ -303,7 +295,6 @@
         session = s;
         await showWhoAmI();
         if (s?.user){
-          // Try to upsert athlete profile on first sign-in
           const cachedName = localStorage.getItem('rowxl-name') || '';
           await upsertAthleteProfile({ user_id: s.user.id, full_name: cachedName, email: s.user.email });
         }
@@ -316,7 +307,6 @@
 
     /* ===== Edge function helpers ===== */
     async function _fetchAndExplain(url, init, label){
-      // merge auth headers automatically
       init = init || {};
       init.headers = { ...(init.headers||{}), ...authHeaders() };
       const res = await fetch(url, init);
@@ -328,7 +318,6 @@
         }
         throw new Error(`${label} error ${res.status}: ${text || 'Unknown error'}`);
       }
-      // Edge functions may return empty 204 or plain text
       const ctype = res.headers.get('content-type') || '';
       return ctype.includes('application/json') ? res.json() : res.text();
     }
@@ -365,12 +354,12 @@
       return _fetchAndExplain(url, { method: 'GET' }, 'coach-list-reports');
     }
 
-    async function shareReport({ athlete_user_id, title, url, report_id }){
+    async function shareReport({ athlete_user_id, title, url, report_id, coach_name }){
       const ep = `${SUPABASE_URL}/functions/v1/coach-share-report`;
       return _fetchAndExplain(ep, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ athlete_user_id, title, url, report_id })
+        body: JSON.stringify({ athlete_user_id, title, url, report_id, coach_name })
       }, 'coach-share-report');
     }
 
@@ -434,7 +423,14 @@
         const copyBtn = document.createElement('button');
         copyBtn.className = 'btn ghost small';
         copyBtn.textContent = 'Copy path';
-        copyBtn.onclick = async ()=>{ try{ await navigator.clipboard.writeText(it.path||''); toast('Path copied ✔'); }catch{ toast('Copy failed', false); } };
+        copyBtn.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(it.path||'');
+            toast('Path copied ✔');
+          } catch {
+            toast('Copy failed', false);
+          }
+        };
 
         const note = document.createElement('textarea'); note.className='note'; note.placeholder='Coach notes…';
 
@@ -546,46 +542,44 @@
         const copyBtn = document.createElement('button');
         copyBtn.className = 'btn small'; copyBtn.textContent = 'Copy link';
         copyBtn.onclick = async () => {
-  try {
-    if (!link) throw new Error('No link');
-    await navigator.clipboard.writeText(link);
-    toast('Link copied ✔');
-  } catch (e) {
-    toast(e.message || 'Copy failed', false);
-  }
-};
+          try {
+            if (!link) throw new Error('No link');
+            await navigator.clipboard.writeText(link);
+            toast('Link copied ✔');
+          } catch (e) {
+            toast(e.message || 'Copy failed', false);
+          }
+        };
 
         const pdfBtn = document.createElement('button');
         pdfBtn.className = 'btn small'; pdfBtn.textContent = 'PDF';
         pdfBtn.onclick = ()=> downloadPDF({ title: it.title, saved_url: link, public_url: link, created_at: it.created_at, athlete_name: it.athlete_name });
 
+        const shareBtn = document.createElement('button');
+        shareBtn.className = 'btn small primary'; shareBtn.textContent = 'Share';
         shareBtn.onclick = async () => {
-  if (!link) return toast('No URL on this report.', false);
-  shareBtn.disabled = true; shareBtn.textContent = 'Sharing…';
-  try {
-    const coach = (document.getElementById('coachInput')?.value || '').trim() || null;
-    const def   = (document.getElementById('defaultAthlete')?.value || '').trim() || null;
-    const id    = it.athlete_user_id || def || null; // allow null; server will resolve
+          if (!link) return toast('No URL on this report.', false);
+          shareBtn.disabled = true; shareBtn.textContent = 'Sharing…';
+          try {
+            const coach = (document.getElementById('coachInput')?.value || '').trim() || null;
+            const def   = (document.getElementById('defaultAthlete')?.value || '').trim() || null;
+            const id    = it.athlete_user_id || def || null;
 
-    const payload = {
-      athlete_user_id: id,                 // may be null
-      title: it.title,
-      url: link,
-      report_id: it.id || null,
-      coach_name: coach
-    };
+            const payload = {
+              athlete_user_id: id,
+              title: it.title,
+              url: link,
+              report_id: it.id || null,
+              coach_name: coach
+            };
 
-    const r = await shareReport(payload);
-    if (r?.ok) toast('Shared ✔'); else throw new Error(r?.error || 'Share failed');
-  } catch (e) {
-    toast(e.message || 'Share failed', false);
-  } finally {
-    shareBtn.disabled = false; shareBtn.textContent = 'Share';
-  }
-};
-            if (r?.ok || r === 'ok') toast('Shared ✔'); else throw new Error(r?.error||'Share failed');
-          }catch(e){ toast(e.message||'Share failed', false); }
-          finally{ shareBtn.disabled=false; shareBtn.textContent='Share'; }
+            const r = await shareReport(payload);
+            if (r?.ok) toast('Shared ✔'); else throw new Error(r?.error || 'Share failed');
+          } catch (e) {
+            toast(e.message || 'Share failed', false);
+          } finally {
+            shareBtn.disabled = false; shareBtn.textContent = 'Share';
+          }
         };
 
         const fixBtn = document.createElement('button');
@@ -604,7 +598,7 @@
         delBtn.onclick = async ()=>{
           if (!confirm(`Delete report "${it.title}"?`)) return;
           try{
-            const res = await _fetchAndExplain(`${SUPABASE_URL}/functions/v1/coach-delete-report`, {
+            await _fetchAndExplain(`${SUPABASE_URL}/functions/v1/coach-delete-report`, {
               method: 'POST',
               headers: { 'Content-Type':'application/json' },
               body: JSON.stringify({ id: it.id, saved_url: link, path: it.path })
