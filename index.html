@@ -12,10 +12,14 @@
     "COACH_SECRET": "abc1234"
   }</script>
 
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" integrity="sha384-rjv8gkJ2C6E2qZqZrZP5o7zvT0o9mJ3qf6eX5mYb3cHVH1iUoS0rQ7GkYz3Q6j8J" crossorigin="anonymous"></script>
+
   <style>
-    :root{ --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb; --muted:#9fb5d1; --outline:#1e3a5f; }
+    :root{ --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb; --muted:#9fb5d1; --outline:#1e3a5f; --brand:#0e3a73; --ok:#1d5a38; --bad:#8b2a2a }
     *{ box-sizing:border-box }
     body{ margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif }
+    a{ color:#cfe2ff }
     .wrap{ max-width:1200px; margin:40px auto; padding:0 20px }
     h1{ margin:0 0 18px; font-size:28px }
     .panel{ background:var(--panel); border:1px solid var(--outline); border-radius:10px; padding:14px }
@@ -26,7 +30,7 @@
     input::placeholder,textarea::placeholder{ color:#7fa1cc }
     button{ cursor:pointer }
     .btn{ padding:8px 10px; border:1px solid var(--outline); border-radius:8px; text-decoration:none; color:#e9f0fb; background:transparent }
-    .btn.primary{ background:#0e3a73; border-color:#205b9a }
+    .btn.primary{ background:var(--brand); border-color:#205b9a }
     .btn.danger{ border-color:#7a2b2b; background:#3b1d1d }
     .btn.ghost{ opacity:.85 }
     .btn.small{ padding:6px 8px; font-size:12px }
@@ -49,6 +53,13 @@
     .pill.err{ background:#3b1d1d; border-color:#7a2b2b; color:#ffc7c7 }
 
     .toast{ position:fixed; right:14px; bottom:14px; background:#113057; border:1px solid var(--outline); padding:10px 12px; border-radius:10px; display:none }
+    .topbar{ background:var(--panel); border-bottom:1px solid var(--outline); position:sticky; top:0; z-index:2 }
+    .topbar-inner{ max-width:1200px; margin:0 auto; padding:10px 20px; display:flex; gap:12px; align-items:center; justify-content:space-between }
+    .authbox{ display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap }
+    .tiny{ font-size:12px; color:var(--muted) }
+    .badge{ font-size:12px; padding:4px 8px; border:1px solid var(--outline); border-radius:999px; background:var(--panel2) }
+
+    .hidden{ display:none !important }
 
     @media (max-width: 1020px){
       .note{ width:160px }
@@ -57,6 +68,28 @@
   </style>
 </head>
 <body>
+  <!-- Top bar / Auth -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div><strong>RowXL</strong> <span class="tiny">Coach Inbox</span></div>
+      <div class="authbox">
+        <div id="whoami" class="tiny badge hidden"></div>
+        <div id="signinBox">
+          <div class="field" style="min-width:220px">
+            <label for="emailInput">Sign in (magic link)</label>
+            <input id="emailInput" type="email" placeholder="you@example.com" />
+          </div>
+          <div class="field" style="min-width:180px">
+            <label for="nameInput">Full name (optional)</label>
+            <input id="nameInput" type="text" placeholder="Noel Carey" />
+          </div>
+          <button id="sendLinkBtn" class="btn primary">Send link</button>
+        </div>
+        <button id="signoutBtn" class="btn danger hidden">Sign out</button>
+      </div>
+    </div>
+  </div>
+
   <div class="wrap">
     <h1>RowXL — Coach Inbox</h1>
 
@@ -196,12 +229,96 @@
     const by = key => (a,b) => (a[key]||'') < (b[key]||'') ? 1 : -1; // desc
     const ellipDiv = txt => { const d=document.createElement('div'); d.className='ellipsis'; d.title=txt||''; d.textContent=txt||'—'; return d; };
 
+    /* ===== Supabase client & Auth state ===== */
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    let session = null;
+
+    function authHeaders(){
+      // Prefer JWT if signed-in; else fall back to anon+coach-secret (test mode)
+      const token = session?.access_token || session?.accessToken;
+      if (token) return { 'Authorization': `Bearer ${token}` };
+      const headers = { 'Authorization': `Bearer ${SUPABASE_ANON}` };
+      if (COACH_SECRET) headers['x-coach-secret'] = COACH_SECRET;
+      return headers;
+    }
+
+    async function showWhoAmI(){
+      const who = $('#whoami');
+      const signoutBtn = $('#signoutBtn');
+      const signinBox = $('#signinBox');
+      if (session?.user){
+        const { user } = session;
+        who.textContent = `Signed in: ${user.email || user.id}`;
+        who.classList.remove('hidden');
+        signoutBtn.classList.remove('hidden');
+        signinBox.classList.add('hidden');
+        // Pre-fill defaultAthlete with this user id
+        $('#defaultAthlete').value = user.id;
+      }else{
+        who.classList.add('hidden');
+        signoutBtn.classList.add('hidden');
+        signinBox.classList.remove('hidden');
+      }
+    }
+
+    async function upsertAthleteProfile({ user_id, full_name, email }){
+      try{
+        if (!user_id) return;
+        // This will succeed only if your RLS allows authenticated user to upsert their own row
+        const { error } = await supabase
+          .from('athletes')
+          .upsert({ user_id, full_name: full_name || null, email: email || null }, { onConflict: 'user_id' });
+        if (error) console.warn('athlete upsert skipped:', error.message);
+      }catch(e){ console.warn('athlete upsert error', e); }
+    }
+
+    // Auth UI wiring
+    $('#sendLinkBtn').addEventListener('click', async ()=>{
+      const email = ($('#emailInput').value||'').trim();
+      const name  = ($('#nameInput').value||'').trim();
+      if (!email) return toast('Enter your email', false);
+      try{
+        const { error } = await supabase.auth.signInWithOtp({ email, options:{ emailRedirectTo: window.location.href }});
+        if (error) throw error;
+        // store name locally; we’ll apply after session comes in
+        localStorage.setItem('rowxl-name', name);
+        toast('Magic link sent. Check your inbox.');
+      }catch(e){ toast(e.message || 'Sign-in failed', false); }
+    });
+
+    $('#signoutBtn').addEventListener('click', async ()=>{
+      await supabase.auth.signOut();
+      session = null;
+      await showWhoAmI();
+      toast('Signed out');
+    });
+
+    // Handle initial session and changes
+    (async ()=>{
+      const { data } = await supabase.auth.getSession();
+      session = data.session || null;
+      await showWhoAmI();
+
+      supabase.auth.onAuthStateChange(async (_evt, s) => {
+        session = s;
+        await showWhoAmI();
+        if (s?.user){
+          // Try to upsert athlete profile on first sign-in
+          const cachedName = localStorage.getItem('rowxl-name') || '';
+          await upsertAthleteProfile({ user_id: s.user.id, full_name: cachedName, email: s.user.email });
+        }
+      });
+    })();
+
     /* Seed coach + boats */
     const coachInput = $('#coachInput'); coachInput.value = DEFAULT_COACH;
     const boatFilter = $('#boatFilter'); ['all',...BOATS].forEach(b=>{const o=document.createElement('option'); o.value=b; o.textContent=(b==='all'?'All boats':b); boatFilter.appendChild(o);});
 
     /* ===== Edge function helpers ===== */
     async function _fetchAndExplain(url, init, label){
+      // merge auth headers automatically
+      init = init || {};
+      init.headers = { ...(init.headers||{}), ...authHeaders() };
       const res = await fetch(url, init);
       if (!res.ok) {
         const text = await res.text().catch(()=> '');
@@ -211,18 +328,16 @@
         }
         throw new Error(`${label} error ${res.status}: ${text || 'Unknown error'}`);
       }
-      return res.json();
+      // Edge functions may return empty 204 or plain text
+      const ctype = res.headers.get('content-type') || '';
+      return ctype.includes('application/json') ? res.json() : res.text();
     }
 
     async function fetchInbox(limit=20){
       const url = `${SUPABASE_URL}/functions/v1/coach-inbox`;
       return _fetchAndExplain(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON}`,
-          'x-coach-secret': COACH_SECRET
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ limit })
       }, 'coach-inbox');
     }
@@ -231,11 +346,7 @@
       const url = `${SUPABASE_URL}/functions/v1/coach-generate-report`;
       return _fetchAndExplain(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON}`,
-          'x-coach-secret': COACH_SECRET
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ coach_name, coach_notes, boat, video_url, file_path, auto_share, delete_on_finish })
       }, 'coach-generate-report');
     }
@@ -244,32 +355,21 @@
       const url = `${SUPABASE_URL}/functions/v1/coach-delete-video`;
       return _fetchAndExplain(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON}`,
-          'x-coach-secret': COACH_SECRET
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path })
       }, 'coach-delete-video');
     }
 
     async function listReports(limit=200, fresh=false){
       const url = `${SUPABASE_URL}/functions/v1/coach-list-reports?limit=${limit}${fresh ? '&fresh=1':''}`;
-      return _fetchAndExplain(url, {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${SUPABASE_ANON}`, 'x-coach-secret': COACH_SECRET }
-      }, 'coach-list-reports');
+      return _fetchAndExplain(url, { method: 'GET' }, 'coach-list-reports');
     }
 
     async function shareReport({ athlete_user_id, title, url, report_id }){
       const ep = `${SUPABASE_URL}/functions/v1/coach-share-report`;
       return _fetchAndExplain(ep, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON}`,
-          'x-coach-secret': COACH_SECRET
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ athlete_user_id, title, url, report_id })
       }, 'coach-share-report');
     }
@@ -278,11 +378,7 @@
       const ep = `${SUPABASE_URL}/functions/v1/coach-fix-athlete`;
       return _fetchAndExplain(ep, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON}`,
-          'x-coach-secret': COACH_SECRET
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ report_id, athlete_user_id })
       }, 'coach-fix-athlete');
     }
@@ -355,10 +451,10 @@
             const r = await generateReportDirect({
               coach_name:coach, coach_notes:text, boat,
               video_url:openUrl, file_path:it.path,
-              auto_share:false,                     // review first, share later
+              auto_share:false,
               delete_on_finish:document.getElementById('autoDeleteChk').checked === true
             });
-            if (r?.ok){ pill.className='pill done'; pill.textContent='report'; toast('Report saved ✔'); }
+            if (r?.ok || r === 'ok'){ pill.className='pill done'; pill.textContent='report'; toast('Report saved ✔'); }
             else throw new Error(r?.error||'Failed');
           }catch(e){ toast(e.message||'Error', false); }
           finally{ sendBtn.disabled=false; sendBtn.textContent='Generate report'; }
@@ -383,7 +479,6 @@
 
     /* ===== Saved reports rendering (robust) ===== */
     function normalizeReportItem(raw){
-      // Accepts either a string (URL) or an object with various fields
       if (typeof raw === 'string') {
         return { id:null, title: raw.split('/').slice(-1)[0], saved_url: raw, public_url: raw, created_at:null,
                  athlete_user_id:null, athlete_name:null, athlete_email:null, status:'done' };
@@ -408,7 +503,8 @@
         $('#rows').innerHTML = `<tr><td class="empty" colspan="5">Loading…</td></tr>`;
         const limit = Number($('#limitSelect').value || 20);
         const data  = await fetchInbox(limit);
-        _inboxCache = data?.items || [];
+        const items = data?.items || data?.data || [];
+        _inboxCache = items;
         renderRows(_inboxCache);
       }catch(e){
         $('#rows').innerHTML = `<tr><td class="empty" colspan="5">Error loading inbox.</td></tr>`;
@@ -467,7 +563,7 @@
           shareBtn.disabled=true; shareBtn.textContent='Sharing…';
           try{
             const r = await shareReport({ athlete_user_id:id, title:it.title, url:link, report_id:it.id||null });
-            if (r?.ok) toast('Shared ✔'); else throw new Error(r?.error||'Share failed');
+            if (r?.ok || r === 'ok') toast('Shared ✔'); else throw new Error(r?.error||'Share failed');
           }catch(e){ toast(e.message||'Share failed', false); }
           finally{ shareBtn.disabled=false; shareBtn.textContent='Share'; }
         };
@@ -488,12 +584,11 @@
         delBtn.onclick = async ()=>{
           if (!confirm(`Delete report "${it.title}"?`)) return;
           try{
-            const res = await fetch(`${SUPABASE_URL}/functions/v1/coach-delete-report`, {
+            const res = await _fetchAndExplain(`${SUPABASE_URL}/functions/v1/coach-delete-report`, {
               method: 'POST',
-              headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${SUPABASE_ANON}`, 'x-coach-secret': COACH_SECRET },
+              headers: { 'Content-Type':'application/json' },
               body: JSON.stringify({ id: it.id, saved_url: link, path: it.path })
-            });
-            if (!res.ok) throw new Error(await res.text());
+            }, 'coach-delete-report');
             tr.remove(); toast('Report deleted');
           }catch(e){ toast(e.message||'Delete failed', false); }
         };
@@ -509,7 +604,8 @@
         $('#reportsRows').innerHTML = `<tr><td class="empty" colspan="6">Loading…</td></tr>`;
         const fresh = document.getElementById('freshLinksChk').checked;
         const data = await listReports(200, fresh);
-        renderReports(data?.items || []);
+        const items = data?.items || data?.data || [];
+        renderReports(items);
       }catch(e){
         $('#reportsRows').innerHTML = `<tr><td class="empty" colspan="6">Error loading reports.</td></tr>`;
         toast(e?.message || 'Failed to load reports', false);
