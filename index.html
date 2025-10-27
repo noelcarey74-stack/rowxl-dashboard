@@ -12,8 +12,8 @@
     "COACH_SECRET": "abc1234"
   }</script>
 
-  <!-- Supabase SDK (used for storage/db calls, but not auth) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js?v=4"></script>
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js?v=5"></script>
 
   <style>
     :root{ --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb; --muted:#9fb5d1; --outline:#1e3a5f; --brand:#0e3a73; --ok:#1d5a38; --bad:#8b2a2a }
@@ -54,16 +54,34 @@
     .toast{ position:fixed; right:14px; bottom:14px; background:#113057; border:1px solid var(--outline); padding:10px 12px; border-radius:10px; display:none }
     .topbar{ background:var(--panel); border-bottom:1px solid var(--outline); position:sticky; top:0; z-index:2 }
     .topbar-inner{ max-width:1200px; margin:0 auto; padding:10px 20px; display:flex; gap:12px; align-items:center; justify-content:space-between }
+    .authbox{ display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap }
     .tiny{ font-size:12px; color:var(--muted) }
     .badge{ font-size:12px; padding:4px 8px; border:1px solid var(--outline); border-radius:999px; background:var(--panel2) }
+
+    .hidden{ display:none !important }
+    @media (max-width: 1020px){ .note{ width:160px } .row-actions{ gap:6px } }
   </style>
 </head>
 <body>
-  <!-- Top bar (auth removed) -->
+  <!-- Top bar / Auth -->
   <div class="topbar">
     <div class="topbar-inner">
       <div><strong>RowXL</strong> <span class="tiny">Coach Inbox</span></div>
-      <div class="tiny badge">Testing mode (no sign-in)</div>
+      <div class="authbox">
+        <div id="whoami" class="tiny badge hidden"></div>
+        <div id="signinBox">
+          <div class="field" style="min-width:220px">
+            <label for="emailInput">Sign in (magic link)</label>
+            <input id="emailInput" type="email" placeholder="you@example.com" />
+          </div>
+          <div class="field" style="min-width:180px">
+            <label for="nameInput">Full name (required)</label>
+            <input id="nameInput" type="text" placeholder="Noel Carey" />
+          </div>
+          <button id="sendLinkBtn" class="btn primary">Send link</button>
+        </div>
+        <button id="signoutBtn" class="btn danger hidden">Sign out</button>
+      </div>
     </div>
   </div>
 
@@ -187,9 +205,9 @@
         return json[key] ?? fallback;
       }catch{ return fallback; }
     }
-    const SUPABASE_URL  = getConfig('SUPABASE_URL',  '');
-    const SUPABASE_ANON = getConfig('SUPABASE_ANON', '');
-    const COACH_SECRET  = getConfig('COACH_SECRET',  '');
+    const SUPABASE_URL  = getConfig('SUPABASE_URL','');
+    const SUPABASE_ANON = getConfig('SUPABASE_ANON','');
+    const COACH_SECRET  = getConfig('COACH_SECRET','');
 
     const DEFAULT_COACH = 'Noel';
     const BOATS = ['8+','4+','4x','4x-','4-','2x','2-','1x'];
@@ -200,21 +218,102 @@
       t.textContent = msg; t.style.display = 'block';
       t.style.borderColor = ok ? '#1d5a38' : '#8b2a2a';
       clearTimeout(t._hide);
-      t._hide = setTimeout(()=> t.style.display = 'none', 2400);
+      t._hide = setTimeout(()=> t.style.display = 'none', 2600);
     };
     const prettyDate = iso => iso ? new Date(iso).toLocaleString() : '—';
-    const by = key => (a,b) => (a[key]||'') < (b[key]||'') ? 1 : -1; // desc
+    const by = key => (a,b) => (a[key]||'') < (b[key]||'') ? 1 : -1;
     const ellipDiv = txt => { const d=document.createElement('div'); d.className='ellipsis'; d.title=txt||''; d.textContent=txt||'—'; return d; };
 
-    /* ===== Supabase client (no auth) ===== */
+    /* ===== Supabase client & Auth state ===== */
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    let session = null;   // current session (if signed-in)
+    let currentUser = null;
 
-    // Always send anon JWT + coach secret (testing mode)
-    function authHeaders(){
-      return {
-        'Authorization': `Bearer ${SUPABASE_ANON}`,
-        'x-coach-secret': COACH_SECRET
-      };
+    function showWhoAmI(){
+      const who = $('#whoami');
+      const signoutBtn = $('#signoutBtn');
+      const signinBox = $('#signinBox');
+      if (session?.user){
+        currentUser = session.user;
+        who.textContent = `Signed in: ${currentUser.email || currentUser.id}`;
+        who.classList.remove('hidden');
+        signoutBtn.classList.remove('hidden');
+        signinBox.classList.add('hidden');
+        // Pre-fill defaultAthlete with this user id
+        $('#defaultAthlete').value = currentUser.id;
+      } else {
+        who.classList.add('hidden');
+        signoutBtn.classList.add('hidden');
+        signinBox.classList.remove('hidden');
+        currentUser = null;
+      }
+    }
+
+    // Upsert athlete on first sign-in (so names/emails join back on reports)
+    async function upsertAthleteProfile({ user_id, full_name, email }){
+      try{
+        if (!user_id) return;
+        const { error } = await supabase
+          .from('athletes')
+          .upsert({ user_id, full_name: full_name || null, email: email || null }, { onConflict: 'user_id' });
+        if (error) console.warn('athlete upsert skipped:', error.message);
+      }catch(e){ console.warn('athlete upsert error', e); }
+    }
+
+    // Send magic link
+    $('#sendLinkBtn').addEventListener('click', async ()=>{
+      const email = ($('#emailInput').value||'').trim();
+      const name  = ($('#nameInput').value||'').trim();
+      if (!email) return toast('Enter your email', false);
+      if (!name)  return toast('Enter your full name', false);
+      try{
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options:{ emailRedirectTo: window.location.href }
+        });
+        if (error) throw error;
+        localStorage.setItem('rowxl-name', name);
+        toast('Magic link sent. Check your inbox.');
+      }catch(e){ toast(e.message || 'Sign-in failed', false); }
+    });
+
+    // Sign out
+    $('#signoutBtn').addEventListener('click', async ()=>{
+      await supabase.auth.signOut();
+      session = null; currentUser = null;
+      showWhoAmI();
+      toast('Signed out');
+    });
+
+    // Initial session and auth change listener
+    (async ()=>{
+      const { data } = await supabase.auth.getSession();
+      session = data.session || null;
+      showWhoAmI();
+
+      supabase.auth.onAuthStateChange(async (_evt, s) => {
+        session = s;
+        showWhoAmI();
+        if (s?.user){
+          const cachedName = localStorage.getItem('rowxl-name') || '';
+          await upsertAthleteProfile({ user_id: s.user.id, full_name: cachedName, email: s.user.email });
+        }
+      });
+    })();
+
+    // Always send JWT (if signed-in) + coach secret. If not signed-in, we still
+    // send anon key (works if your Edge function allows anon for testing).
+    function authHeaders(requireLogin = true){
+      const headers = { 'x-coach-secret': COACH_SECRET };
+      if (session?.access_token || session?.accessToken){
+        headers['Authorization'] = `Bearer ${session.access_token || session.accessToken}`;
+        return headers;
+      }
+      if (requireLogin){
+        throw new Error('Sign-in required');
+      }
+      headers['Authorization'] = `Bearer ${SUPABASE_ANON}`;
+      return headers;
     }
 
     /* Seed coach + boats */
@@ -222,9 +321,14 @@
     const boatFilter = document.getElementById('boatFilter'); ['all',...BOATS].forEach(b=>{const o=document.createElement('option'); o.value=b; o.textContent=(b==='all'?'All boats':b); boatFilter.appendChild(o);});
 
     /* ===== Edge function helpers ===== */
-    async function _fetchAndExplain(url, init, label){
+    async function _fetchAndExplain(url, init, label, requireLogin = true){
       init = init || {};
-      init.headers = { ...(init.headers||{}), ...authHeaders() };
+      try{
+        init.headers = { ...(init.headers||{}), ...authHeaders(requireLogin) };
+      }catch(e){
+        toast(e.message||'Sign-in required', false);
+        throw e;
+      }
       const res = await fetch(url, init);
       if (!res.ok) {
         const text = await res.text().catch(()=> '');
@@ -252,7 +356,11 @@
       return _fetchAndExplain(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coach_name, coach_notes, boat, video_url, file_path, auto_share, delete_on_finish })
+        body: JSON.stringify({
+          coach_name, coach_notes, boat, video_url, file_path,
+          auto_share,
+          delete_on_finish
+        })
       }, 'coach-generate-report');
     }
 
@@ -571,7 +679,7 @@
     document.getElementById('boatFilter').addEventListener('change', loadInbox);
     document.getElementById('loadReportsBtn').addEventListener('click', loadReports);
 
-    // First load
+    // First load (will prompt for sign-in if not logged in)
     loadInbox();
   </script>
 </body>
