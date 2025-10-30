@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>RowXL — Athlete Inbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{ --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb; --muted:#9fb5d1; --outline:#1e3a5f; }
+    *{ box-sizing:border-box }
+    body{ margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif }
+    .wrap{ max-width:900px; margin:36px auto; padding:0 16px }
+    h1{ margin:0 0 16px; font-size:28px }
+    .panel{ background:var(--panel); border:1px solid var(--outline); border-radius:10px; padding:14px }
+    .controls{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px }
+    .field{ display:flex; flex-direction:column }
+    label{ font-size:12px; color:var(--muted); margin:0 0 4px }
+    input,button{ background:var(--panel2); color:var(--text); border:1px solid var(--outline); border-radius:8px; padding:8px 10px; outline:none }
+    button{ cursor:pointer }
+    table{ width:100%; border-collapse:collapse; overflow:hidden; border-radius:10px }
+    th,td{ padding:12px 10px; border-bottom:1px solid var(--outline) }
+    th{ background:#0e294c; text-align:left; color:#cfe2ff; font-weight:600 }
+    tr:hover td{ background:#0e2543 }
+    .empty{ color:var(--muted); padding:18px }
+    .btn{ padding:6px 10px; border:1px solid var(--outline); border-radius:8px; background:transparent; color:#e9f0fb; text-decoration:none; font-size:14px }
+    .btn.primary{ background:#0e3a73; border-color:#205b9a }
+    .tiny{ color:#9fb5d1; font-size:12px }
+    .toast{ position:fixed; right:14px; bottom:14px; background:#113057; border:1px solid var(--outline); padding:10px 12px; border-radius:10px; display:none }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>RowXL — Athlete Inbox</h1>
+
+    <div class="panel">
+      <div class="controls">
+        <div class="field" style="flex:1; min-width:260px">
+          <label for="uuid">Your Athlete UUID</label>
+          <input id="uuid" placeholder="Paste your UUID…" />
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button id="loadBtn" class="btn primary">Load my reports</button>
+        </div>
+      </div>
+      <div class="tiny">Tip: Your coach can set your UUID when they press “Share” in the Coach Inbox.</div>
+    </div>
+
+    <h2 class="tiny" style="margin:18px 0 8px; font-size:18px; color:#dbe8ff">Shared Reports</h2>
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:58%">Title</th>
+            <th style="width:22%">Shared</th>
+            <th style="width:20%">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rows"><tr><td class="empty" colspan="3">No reports loaded.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    // ===== Config (testing mode) =====
+    const SUPABASE_URL  = "https://cketlapkaqmhtmthxozu.supabase.co";
+    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZXRsYXBrYXFtaHRtdGh4b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NjIwMzgsImV4cCI6MjA3NzMzODAzOH0.wfmjPBb-7cNpmlV2JByRHGAwkKjsrK7fHd2D7wlf5oA";
+
+    // New public function that returns this athlete’s shared reports only:
+    // GET /functions/v1/athlete-inbox?athlete=<uuid>
+    async function fetchReports(athlete){
+      const u = new URL(`${SUPABASE_URL}/functions/v1/athlete-inbox`);
+      u.searchParams.set("athlete", athlete);
+      const res = await fetch(u, { headers: { "Authorization": `Bearer ${SUPABASE_ANON}` }});
+      if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      return res.json();
+    }
+
+    const $ = s => document.querySelector(s);
+    const pretty = iso => iso ? new Date(iso).toLocaleString() : "—";
+    const toast = (m, ok=true) => { const t=$("#toast"); t.textContent=m; t.style.display="block"; t.style.borderColor=ok?"#1d5a38":"#8b2a2a"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",2200); };
+
+    function render(items){
+      const tbody = $("#rows");
+      tbody.innerHTML = "";
+      if(!items?.length){ tbody.innerHTML = `<tr><td class="empty" colspan="3">No reports found for this athlete.</td></tr>`; return; }
+      for(const it of items){
+        const tr = document.createElement("tr");
+        const tdTitle = document.createElement("td");
+        const tdDate  = document.createElement("td");
+        const tdAct   = document.createElement("td");
+
+        tdTitle.textContent = (it.title || it.url || "").split("/").slice(-1)[0] || "report.md";
+        tdDate.textContent  = pretty(it.created_at);
+
+        const open = document.createElement("a");
+        open.className="btn"; open.textContent="Open";
+        open.target="_blank"; open.rel="noopener";
+        open.href = it.url;
+
+        const dl = document.createElement("a");
+        dl.className="btn"; dl.textContent="Copy link";
+        dl.href="#";
+        dl.onclick = async (e)=>{ e.preventDefault(); try{ await navigator.clipboard.writeText(it.url); toast("Copied ✔"); }catch(e){ toast("Copy failed",false);} };
+
+        tdAct.append(open, " ", dl);
+        tr.append(tdTitle, tdDate, tdAct);
+        tbody.appendChild(tr);
+      }
+    }
+
+    // Load handler
+    $("#loadBtn").onclick = async ()=>{
+      const id = ($("#uuid").value||"").trim();
+      if(!id) return toast("Paste your Athlete UUID first", false);
+      $("#rows").innerHTML = `<tr><td class="empty" colspan="3">Loading…</td></tr>`;
+      try{
+        const data = await fetchReports(id);
+        render(data?.items || []);
+        localStorage.setItem("rowxl_athlete_uuid", id);
+      }catch(e){ toast(e.message||"Load failed", false);
+        $("#rows").innerHTML = `<tr><td class="empty" colspan="3">Error loading.</td></tr>`;
+      }
+    };
+
+    // Auto-fill from last time
+    const saved = localStorage.getItem("rowxl_athlete_uuid");
+    if(saved){ $("#uuid").value = saved; }
+  </script>
+</body>
+</html>
