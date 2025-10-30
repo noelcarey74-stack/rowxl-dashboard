@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>RowXL — Coach Inbox (Testing mode)</title>
+  <title>RowXL — Coach Inbox</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{ --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb; --muted:#9fb5d1; --outline:#1e3a5f; --brand:#0e3a73; --ok:#1d5a38; --bad:#8b2a2a }
+    :root{ --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb; --muted:#9fb5d1; --outline:#1e3a5f; --brand:#0e3a73; }
     *{ box-sizing:border-box }
     body{ margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif }
     .wrap{ max-width:1100px; margin:40px auto; padding:0 20px }
@@ -17,12 +17,12 @@
     input,select,button,textarea{ background:var(--panel2); color:var(--text); border:1px solid var(--outline); border-radius:8px; padding:8px 10px; outline:none }
     input::placeholder,textarea::placeholder{ color:#7fa1cc }
     button{ cursor:pointer }
-    table{ width:100%; border-collapse:collapse; overflow:hidden; border-radius:10px; table-layout:fixed }
-    th,td{ padding:12px 10px; border-bottom:1px solid var(--outline); vertical-align:middle; overflow:hidden; white-space:nowrap; text-overflow:ellipsis }
+    table{ width:100%; border-collapse:collapse; overflow:hidden; border-radius:10px }
+    th,td{ padding:12px 10px; border-bottom:1px solid var(--outline); vertical-align:middle }
     th{ background:#0e294c; text-align:left; color:#cfe2ff; font-weight:600 }
     tr:hover td{ background:#0e2543 }
     .row-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
-    .note{ width:220px; height:46px; resize:vertical }
+    .note{ width:200px; height:46px; resize:vertical }
     .pill{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--outline); color:#b8d2ff }
     .pill.done{ background:#113e22; border-color:#1d5a38; color:#bff3d3 }
     .toast{ position:fixed; right:14px; bottom:14px; background:#113057; border:1px solid var(--outline); padding:10px 12px; border-radius:10px; display:none }
@@ -33,8 +33,8 @@
     .btn.ghost{ opacity:.85 }
     .btn.small{ padding:6px 8px; font-size:12px }
     .section-title{ margin:24px 0 10px; font-size:20px; color:#dbe8ff }
-    .badge{ font-size:12px; padding:4px 8px; border:1px solid var(--outline); border-radius:999px; background:var(--panel2) }
-    @media (max-width: 900px){
+    .tiny{ font-size:12px; color:#9fb5d1 }
+    @media (max-width: 980px){
       .note{ width:160px }
     }
   </style>
@@ -43,7 +43,7 @@
   <div class="wrap">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <h1>RowXL — Coach Inbox</h1>
-      <div class="badge">Testing mode (no sign-in)</div>
+      <div class="tiny" style="padding:6px 10px;border:1px solid var(--outline);border-radius:999px;background:var(--panel2)">Testing mode (no sign-in)</div>
     </div>
 
     <!-- ===== Inbox (videos to review) ===== -->
@@ -55,7 +55,9 @@
         </div>
         <div class="field">
           <label for="limitSelect">Limit</label>
-          <select id="limitSelect"><option>10</option><option selected>20</option><option>40</option><option>80</option></select>
+          <select id="limitSelect">
+            <option>10</option><option selected>20</option><option>40</option><option>80</option>
+          </select>
         </div>
         <div class="field">
           <label>&nbsp;</label>
@@ -63,288 +65,249 @@
         </div>
       </div>
 
-      <table>
+      <table id="jobs">
         <thead>
           <tr>
-            <th style="width:40%">Video</th>
-            <th style="width:20%">Athlete (User ID)</th>
+            <th style="width:32%">Video</th>
+            <th style="width:26%">Athlete (name • email • user id)</th>
             <th style="width:10%">Boat</th>
-            <th style="width:12%">Status</th>
-            <th style="width:18%">Created</th>
+            <th style="width:10%">Status</th>
+            <th style="width:12%">Created</th>
+            <th style="width:10%">Actions</th>
           </tr>
         </thead>
-        <tbody id="rows"><tr><td class="empty" colspan="5">No videos yet.</td></tr></tbody>
+        <tbody id="rows">
+          <tr><td class="empty" colspan="6">No videos yet.</td></tr>
+        </tbody>
       </table>
-      <div class="empty" style="border-top:1px dashed var(--outline);margin-top:8px;padding-top:8px">
-        “Generate report” saves a markdown report to Storage and (optionally) DB. Use “Share” below to send it to the athlete.
-      </div>
+      <div class="tiny" style="margin-top:8px">“Generate report” saves a markdown report and embeds the video link inside it.</div>
     </div>
 
     <!-- ===== Saved Reports ===== -->
     <h2 class="section-title">Saved Reports</h2>
     <div class="panel">
       <div class="controls" style="justify-content:space-between;gap:12px;align-items:flex-end">
-        <div class="field"><label>&nbsp;</label><button id="loadReportsBtn" class="btn">Load reports</button></div>
-        <div class="field" style="flex:1;min-width:260px">
+        <div class="field">
+          <label>&nbsp;</label>
+          <button id="loadReportsBtn" class="btn">Load reports</button>
+        </div>
+        <div class="field" style="flex:1; min-width:260px">
           <label for="defaultAthlete">Default Athlete UUID (optional)</label>
           <input id="defaultAthlete" placeholder="d64ae833-ed5e-47ff-a43b-5ffa#..." />
         </div>
-        <div class="field"><label>&nbsp;</label><span style="color:#9fb5d1;font-size:12px">Click “Share” to deliver a report to an athlete.</span></div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <span class="tiny">Click “Share” to send a report to an athlete.</span>
+        </div>
       </div>
 
       <table>
-        <thead><tr>
-          <th style="width:32%">Title</th>
-          <th style="width:18%">Athlete</th>
-          <th style="width:10%">Status</th>
-          <th style="width:18%">Created</th>
-          <th style="width:22%">Actions</th>
-        </tr></thead>
-        <tbody id="reportsRows"><tr><td class="empty" colspan="5">No reports loaded.</td></tr></tbody>
+        <thead>
+          <tr>
+            <th style="width:30%">Title</th>
+            <th style="width:22%">Athlete</th>
+            <th style="width:16%">Status</th>
+            <th style="width:16%">Created</th>
+            <th style="width:16%">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="reportsRows">
+          <tr><td class="empty" colspan="5">No reports loaded.</td></tr>
+        </tbody>
       </table>
+
+      <div id="missingFnWarn" class="tiny" style="display:none;margin-top:8px;color:#ffc7c7"></div>
     </div>
   </div>
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="toast" class="toast"></div>
 
   <script type="module">
-    /* ================== TESTING CONFIG (no login) ================== */
+    /* ===== CONFIG (testing mode; no login needed) ===== */
     const SUPABASE_URL  = "https://cketlapkaqmhtmthxozu.supabase.co";
     const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZXRsYXBrYXFtaHRtdGh4b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NjIwMzgsImV4cCI6MjA3NzMzODAzOH0.wfmjPBb-7cNpmlV2JByRHGAwkKjsrK7fHd2D7wlf5oA";
-    const COACH_SECRET  = "abc1234"; // must match your Edge Function secret
-
-    const BOATS = ["8+","4+","4x","4x-","4-","2x","2-","1x"];
+    const COACH_SECRET  = "abc1234";   // must match the Edge Function check
     const DEFAULT_COACH = "Noel";
+    const BOATS = ["8+","4+","4x","4x-","4-","2x","2-","1x"];
 
-    /* =========================== UI helpers =========================== */
+    /* ===== Helpers ===== */
     const $ = s => document.querySelector(s);
-    const toast = (m, ok=true)=>{ const t=$("#toast"); if(!t) return;
-      t.textContent=m; t.style.display='block'; t.style.borderColor= ok?'#1d5a38':'#8b2a2a';
-      clearTimeout(t._hide); t._hide=setTimeout(()=>t.style.display='none',2400);
-    };
+    const toast = (m, ok=true)=>{ const t=$("#toast"); if(!t) return; t.textContent=m; t.style.display="block"; t.style.borderColor=ok?"#1d5a38":"#8b2a2a"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",2400); };
     const prettyDate = iso => iso ? new Date(iso).toLocaleString() : "—";
-    const coachInput = $("#coachInput"); coachInput.value = localStorage.getItem("coach_name") || DEFAULT_COACH;
-    coachInput.addEventListener("input", ()=>localStorage.setItem("coach_name", coachInput.value.trim()));
 
-    /* ======================= Edge function callers ======================= */
-    const fn = name => `${SUPABASE_URL}/functions/v1/${name}`;
-    const commonHeaders = { "Authorization": `Bearer ${SUPABASE_ANON}`, "x-coach-secret": COACH_SECRET };
+    // Seed coach name
+    const coachInput=$("#coachInput");
+    coachInput.value = localStorage.getItem("coach_name") || DEFAULT_COACH;
+    coachInput.addEventListener("input", ()=> localStorage.setItem("coach_name", coachInput.value.trim()));
 
-    async function fetchInbox(limit=20){
-      const res = await fetch(fn("coach-inbox"), {
-        method:"POST",
-        headers:{ "Content-Type":"application/json", ...commonHeaders },
-        body: JSON.stringify({ limit })
-      });
-      if(!res.ok) throw new Error(await res.text()); return res.json();
+    /* ===== Edge wrappers ===== */
+    const fn = n => `${SUPABASE_URL}/functions/v1/${n}`;
+    async function _fetch(name, init){
+      init = init || {};
+      init.headers = { ...(init.headers||{}), "Content-Type":"application/json", "Authorization":`Bearer ${SUPABASE_ANON}`, "x-coach-secret": COACH_SECRET };
+      const res = await fetch(fn(name), init);
+      if (!res.ok) {
+        const txt = await res.text().catch(()=> "");
+        if(res.status===404){ const w=$("#missingFnWarn"); if(w){w.style.display="block"; w.textContent=`Missing Edge Function “${name}”. Deploy with: supabase functions deploy ${name}`;} }
+        throw new Error(`${name} ${res.status}: ${txt||"error"}`);
+      }
+      const ct = res.headers.get("content-type")||"";
+      return ct.includes("application/json") ? res.json() : res.text();
     }
+    const fetchInbox = (limit=20)=> _fetch("coach-inbox",{ method:"POST", body:JSON.stringify({ limit }) });
+    const generateReport = (payload)=> _fetch("coach-generate-report",{ method:"POST", body:JSON.stringify(payload) });
+    const deleteVideo = (path)=> _fetch("coach-delete-video",{ method:"POST", body:JSON.stringify({ path }) });
+    const listReports = (limit=200)=> _fetch(`coach-list-reports?limit=${limit}`,{ method:"GET" });
+    const shareReport = (payload)=> _fetch("coach-share-report",{ method:"POST", body:JSON.stringify(payload) });
 
-    async function generateReport({ file_path, video_url, coach_name, coach_notes, boat }){
-      const res = await fetch(fn("coach-generate-report"), {
-        method:"POST",
-        headers:{ "Content-Type":"application/json", ...commonHeaders },
-        body: JSON.stringify({ coach_name, coach_notes, boat, video_url, file_path, auto_share:false, delete_on_finish:false })
-      });
-      if(!res.ok) throw new Error(await res.text()); return res.json();
-    }
-
-    async function deleteVideo(path){
-      const res = await fetch(fn("coach-delete-video"), {
-        method:"POST",
-        headers:{ "Content-Type":"application/json", ...commonHeaders },
-        body: JSON.stringify({ path })
-      });
-      if(!res.ok) throw new Error(await res.text()); return res.json();
-    }
-
-    async function listReports(limit=200){
-      const res = await fetch(fn("coach-list-reports")+`?limit=${limit}`, { headers:{ ...commonHeaders } });
-      if(!res.ok) throw new Error(await res.text()); return res.json();
-    }
-
-    async function shareReport({ athlete_user_id, title, url, report_id }){
-      const res = await fetch(fn("coach-share-report"), {
-        method:"POST",
-        headers:{ "Content-Type":"application/json", ...commonHeaders },
-        body: JSON.stringify({ athlete_user_id, title, url, report_id })
-      });
-      if(!res.ok) throw new Error(await res.text()); return res.json();
-    }
-
-    /* ========================= Render: Inbox rows ========================= */
+    /* ===== Render: inbox ===== */
     function renderRows(items){
-      const tbody = $("#rows"); tbody.innerHTML='';
-      if(!items?.length){ tbody.innerHTML=`<tr><td class="empty" colspan="5">No videos yet.</td></tr>`; return; }
+      const tbody = $("#rows"); tbody.innerHTML = "";
+      if (!items?.length){ tbody.innerHTML = `<tr><td class="empty" colspan="6">No videos yet.</td></tr>`; return; }
 
       for(const it of items){
         const tr = document.createElement("tr");
 
-        const openUrl = it.signed_url || it.signedUrl || it.url || it.video_path || null;
-        const videoName = (it.path||it.video_path||"").split("/").pop() || "video";
-        const athleteId = it.athlete_user_id || it.user_id || "";
-
         // Video
-        const c1 = document.createElement("td");
-        c1.innerHTML = `<div style="display:flex;gap:10px;align-items:center">
-            <div style="width:10px;height:10px;border-radius:50%;background:#3d7cff"></div>
-            <div style="font-weight:600">${videoName}</div>
-            <button class="btn ghost small" style="margin-left:10px">Preview</button>
-          </div>`;
-        c1.querySelector("button").onclick = ()=>{ if(!openUrl){ toast("No signed URL.",false); return; } window.open(openUrl,"_blank"); };
+        const videoCell=document.createElement("td");
+        const name=(it.path||it.video_path||"").split("/").pop() || it.id || "video";
+        const openUrl=it.signed_url || it.signedUrl || it.url || it.video_path;
+        const fname = document.createElement("div"); fname.style.fontWeight="600"; fname.textContent=name;
+        const path = document.createElement("div"); path.className="tiny"; path.textContent=(it.path||"").slice(0,120);
+        videoCell.append(fname, path);
 
-        // Athlete
-        const c2 = document.createElement("td"); c2.textContent = athleteId || "—";
+        // Athlete (name • email • user id)
+        const athleteCell=document.createElement("td");
+        const nm=document.createElement("div"); nm.textContent = it.athlete_name || "—";
+        const email=document.createElement("div"); email.className="tiny"; email.textContent = it.athlete_email || "—";
+        const uid=document.createElement("div"); uid.className="tiny"; uid.style.opacity=0.85; uid.textContent = it.user_id || it.athlete_user_id || "—";
+        athleteCell.append(nm, email, uid);
 
         // Boat
-        const c3 = document.createElement("td");
-        const sel = document.createElement("select");
+        const boatCell=document.createElement("td");
+        const sel=document.createElement("select");
         sel.innerHTML = `<option value="">—</option>` + BOATS.map(b=>`<option>${b}</option>`).join("");
-        sel.value = it.boat || ""; c3.appendChild(sel);
+        sel.value = it.boat || "";
+        boatCell.appendChild(sel);
 
         // Status
-        const c4 = document.createElement("td");
-        const pill = document.createElement("span"); pill.className="pill"; pill.textContent = it.job_status || it.status || "new";
-        c4.appendChild(pill);
+        const statusCell=document.createElement("td");
+        const pill=document.createElement("span"); pill.className="pill"; pill.textContent=it.job_status||it.status||"new";
+        statusCell.appendChild(pill);
 
-        // Created + actions stacked
-        const c5 = document.createElement("td");
-        const created = prettyDate(it.created_at || it.uploaded_at);
-        c5.innerHTML = `<div>${created}</div>`;
-        const actions = document.createElement("div"); actions.className="row-actions"; actions.style.marginTop="6px";
+        // Created
+        const createdCell=document.createElement("td"); createdCell.textContent=prettyDate(it.created_at||it.uploaded_at);
 
-        const note = document.createElement("textarea"); note.className="note"; note.placeholder="Coach notes…";
-        const genBtn = document.createElement("button"); genBtn.className="btn primary small"; genBtn.textContent="Generate report";
-        const delBtn = document.createElement("button"); delBtn.className="btn danger small"; delBtn.textContent="Delete";
-
-        genBtn.onclick = async ()=>{
-          const coach = (coachInput.value||"").trim();
-          const boat = sel.value || "";
-          const text = (note.value||"").trim();
-          if(!coach) return toast("Enter coach name.",false);
-          if(!text)  return toast("Write a quick note.",false);
-          if(!openUrl) return toast("No signed video URL.",false);
-
-          genBtn.disabled=true; genBtn.textContent="Saving…";
+        // Actions
+        const actionsCell=document.createElement("td"); actionsCell.className="row-actions";
+        const previewBtn=document.createElement("button"); previewBtn.className="btn ghost small"; previewBtn.textContent="Preview";
+        previewBtn.onclick=()=>{ if(!openUrl){ toast("No signed URL",false); return; } window.open(openUrl,"_blank"); };
+        const note=document.createElement("textarea"); note.className="note"; note.placeholder="Coach notes (what you saw; what to work on)…";
+        const sendBtn=document.createElement("button"); sendBtn.className="btn primary small"; sendBtn.textContent="Generate report";
+        sendBtn.onclick=async()=>{
+          const coach=(coachInput.value||"").trim();
+          const boat=sel.value||""; const text=(note.value||"").trim();
+          if(!coach) return toast("Enter coach name",false);
+          if(!text)  return toast("Add notes",false);
+          if(!openUrl) return toast("No signed video URL",false);
+          sendBtn.disabled=true; sendBtn.textContent="Generating…";
           try{
-            const r = await generateReport({ file_path: it.path, video_url: openUrl, coach_name: coach, coach_notes: text, boat });
+            const r=await generateReport({ coach_name:coach, coach_notes:text, boat, video_url:openUrl, file_path:it.path, athlete_user_id: it.user_id || it.athlete_user_id || null, auto_share:false, delete_on_finish:false });
             if(r?.ok){ pill.className="pill done"; pill.textContent="report"; toast("Report saved ✔"); }
             else throw new Error(r?.error||"Failed");
           }catch(e){ toast(e.message||"Error",false); }
-          finally{ genBtn.disabled=false; genBtn.textContent="Generate report"; }
+          finally{ sendBtn.disabled=false; sendBtn.textContent="Generate report"; }
         };
-
-        delBtn.onclick = async ()=>{
-          if(!confirm(`Delete clip “${videoName}” from storage?`)) return;
+        const delBtn=document.createElement("button"); delBtn.className="btn danger small"; delBtn.textContent="Delete";
+        delBtn.onclick=async()=>{ if(!confirm(`Delete clip "${name}" from storage?`)) return;
           delBtn.disabled=true; delBtn.textContent="Deleting…";
           try{ await deleteVideo(it.path); tr.remove(); toast("Video deleted"); }
           catch(e){ toast(e.message||"Delete failed",false); }
-          finally{ delBtn.disabled=false; delBtn.textContent="Delete"; }
-        };
+          finally{ delBtn.disabled=false; delBtn.textContent="Delete"; } };
 
-        actions.append(note, genBtn, delBtn);
-        c5.appendChild(actions);
-
-        tr.append(c1,c2,c3,c4,c5);
+        actionsCell.append(previewBtn, note, sendBtn, delBtn);
+        tr.append(videoCell, athleteCell, boatCell, statusCell, createdCell, actionsCell);
         tbody.appendChild(tr);
       }
     }
 
-    /* ======================== Render: Saved reports ======================== */
+    /* ===== Render: saved reports ===== */
     function renderReports(items){
-      const tbody = $("#reportsRows"); tbody.innerHTML='';
+      const tbody=$("#reportsRows"); tbody.innerHTML="";
       if(!items?.length){ tbody.innerHTML=`<tr><td class="empty" colspan="5">No reports found.</td></tr>`; return; }
-
       for(const it of items){
-        const tr = document.createElement("tr");
-        const title = (it.title || it.saved_url || it.path || "").split("/").slice(-1)[0] || "report";
-        const athlete = it.athlete_user_id || "—";
-        const created = prettyDate(it.created_at);
+        const tr=document.createElement("tr");
+        const titleCell=document.createElement("td");
+        const athleteCell=document.createElement("td");
+        const statusCell=document.createElement("td");
+        const createdCell=document.createElement("td");
+        const actionsCell=document.createElement("td"); actionsCell.className="row-actions";
 
-        const c1=document.createElement("td"); c1.textContent = title;
-        const c2=document.createElement("td"); c2.textContent = athlete;
-        const c3=document.createElement("td"); c3.textContent = it.status || "done";
-        const c4=document.createElement("td"); c4.textContent = created;
+        const displayTitle=(it.title||it.saved_url||it.path||"").split("/").slice(-1)[0] || "report";
+        titleCell.textContent=displayTitle;
+        athleteCell.textContent = it.athlete_user_id || "—";
+        statusCell.textContent  = it.status || "done";
+        createdCell.textContent = prettyDate(it.created_at);
 
-        const c5=document.createElement("td"); c5.className="row-actions";
         const openBtn=document.createElement("a"); openBtn.className="btn small"; openBtn.textContent="Open"; openBtn.target="_blank"; openBtn.rel="noopener"; openBtn.href=it.saved_url||it.public_url||"#";
         const copyBtn=document.createElement("button"); copyBtn.className="btn small"; copyBtn.textContent="Copy link";
         copyBtn.onclick=async()=>{ try{ const link=it.saved_url||it.public_url; if(!link) throw new Error("No link"); await navigator.clipboard.writeText(link); toast("Link copied ✔"); }catch(e){ toast(e.message||"Copy failed",false); } };
-        const pdfBtn=document.createElement("button"); pdfBtn.className="btn small"; pdfBtn.textContent="PDF"; pdfBtn.onclick=()=>downloadPDF(it);
-
+        const pdfBtn=document.createElement("button"); pdfBtn.className="btn small"; pdfBtn.textContent="PDF";
+        pdfBtn.onclick=()=>downloadPDF(it);
         const shareBtn=document.createElement("button"); shareBtn.className="btn small primary"; shareBtn.textContent="Share";
-        shareBtn.onclick=async()=>{ const athleteId = it.athlete_user_id || ($("#defaultAthlete").value||"").trim();
-          if(!athleteId) return toast("Set athlete UUID to share.",false);
-          const url = it.saved_url || it.public_url; if(!url) return toast("No URL on this report.",false);
+        shareBtn.onclick=async()=>{ const def=($("#defaultAthlete").value||"").trim(); const athleteId=it.athlete_user_id || def; if(!athleteId) return toast("Enter athlete UUID (row or default)",false);
+          const url=it.saved_url||it.public_url; if(!url) return toast("No URL on this report.",false);
           shareBtn.disabled=true; shareBtn.textContent="Sharing…";
-          try{ const r = await shareReport({ athlete_user_id: athleteId, title, url, report_id: it.id||null }); if(r?.ok) toast("Shared with athlete ✔"); else throw new Error(r?.error||"Share failed"); }
+          try{ const r=await shareReport({ athlete_user_id:athleteId, title:displayTitle, url, report_id:it.id||null, coach_name:(coachInput.value||null) }); if(r?.ok) toast("Shared ✔"); else throw new Error(r?.error||"Share failed"); }
           catch(e){ toast(e.message||"Share failed",false); }
-          finally{ shareBtn.disabled=false; shareBtn.textContent="Share"; }
-        };
-
+          finally{ shareBtn.disabled=false; shareBtn.textContent="Share"; } };
         const delBtn=document.createElement("button"); delBtn.className="btn small danger"; delBtn.textContent="Delete";
-        delBtn.onclick=async()=>{ if(!confirm(`Delete report “${title}”?`)) return;
-          try{ const res = await fetch(fn("coach-delete-report"), { method:"POST", headers:{ "Content-Type":"application/json", ...commonHeaders }, body: JSON.stringify({ id: it.id, saved_url: it.saved_url, path: it.path }) });
-               if(!res.ok) throw new Error(await res.text()); tr.remove(); toast("Report deleted"); }
+        delBtn.onclick=async()=>{ if(!confirm(`Delete report "${displayTitle}"?`)) return;
+          try{ await _fetch("coach-delete-report",{ method:"POST", body:JSON.stringify({ id:it.id, saved_url:it.saved_url, path:it.path }) }); tr.remove(); toast("Report deleted"); }
           catch(e){ toast(e.message||"Delete failed",false); } };
 
-        c5.append(openBtn,copyBtn,pdfBtn,shareBtn,delBtn);
-        tr.append(c1,c2,c3,c4,c5);
+        actionsCell.append(openBtn,copyBtn,pdfBtn,shareBtn,delBtn);
+        tr.append(titleCell,athleteCell,statusCell,createdCell,actionsCell);
         tbody.appendChild(tr);
       }
     }
 
-    /* =========================== PDF generator =========================== */
+    /* ===== PDF helper ===== */
     async function downloadPDF(report){
       try{
-        const url = report.saved_url || report.public_url; if(!url) throw new Error("No saved URL on report.");
-        const md = await (await fetch(url)).text();
-        const safe = md.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
-          .replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>')
-          .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/\n/g,'<br/>');
-        const created=prettyDate(report.created_at);
-        const logo=`${SUPABASE_URL}/storage/v1/object/public/reports/branding/logo.png`;
-        const html=`<!doctype html><html><head><meta charset="utf-8"><title>${report.title||'RowXL Report'}</title>
+        const url=report.saved_url||report.public_url; if(!url) throw new Error("No saved URL on report.");
+        const md=await (await fetch(url)).text();
+        const safe=md.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+          .replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>")
+          .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\*(.*?)\*/g,"<em>$1</em>").replace(/\n/g,"<br/>");
+        const html=`<!doctype html><html><head><meta charset="utf-8"><title>${report.title||"RowXL Report"}</title>
 <style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;margin:0;background:#f7fbff}
-.header{background:#0a1a2f;color:#fff;padding:24px 18px;text-align:center}.header img{height:40px;display:block;margin:0 auto 8px}
-.wrap{max-width:800px;margin:24px auto;background:#fff;border:1px solid #e3edf7;border-radius:14px;box-shadow:0 6px 20px rgba(10,26,47,.06)}
-.inner{padding:24px}h1,h2,h3{color:#0a1a2f;margin:0 0 8px}.meta{color:#335;font-size:14px;margin-bottom:12px}hr{border:0;border-top:1px solid #e5effa;margin:18px 0}
+.header{background:#0a1a2f;color:#fff;padding:24px 18px;text-align:center}.wrap{max-width:800px;margin:24px auto;background:#fff;border:1px solid #e3edf7;border-radius:14px;box-shadow:0 6px 20px rgba(10,26,47,.06)}.inner{padding:24px}
+h1,h2,h3{color:#0a1a2f;margin:0 0 8px}.meta{color:#335;font-size:14px;margin-bottom:12px}hr{border:0;border-top:1px solid #e5effa;margin:18px 0}
 @media print{.wrap{box-shadow:none;border:0}body{background:#fff}}</style></head><body>
-<div class="header"><img src="${logo}" alt="RowXL"><div>Performance Coaching Report</div></div>
-<div class="wrap"><div class="inner"><h2>${(report.title||'RowXL Report').split('/').slice(-1)[0]}</h2>
-<div class="meta">Coach: ${coachInput.value || '—'} • Created: ${created}</div><hr/><div>${safe}</div></div></div>
+<div class="header"><div style="font-weight:600">Performance Coaching Report</div></div>
+<div class="wrap"><div class="inner"><h2>${(report.title||"RowXL Report").split("/").slice(-1)[0]}</h2>
+<div class="meta">Coach: ${coachInput.value||"—"} • Created: ${prettyDate(report.created_at)}</div><hr/><div>${safe}</div></div></div>
 <script>window.onload=()=>setTimeout(()=>window.print(),300);<\/script></body></html>`;
-        const win=window.open('','_blank'); win.document.open(); win.document.write(html); win.document.close();
-      }catch(e){ toast(e.message||'PDF failed',false); }
+        const win=window.open("","_blank"); win.document.open(); win.document.write(html); win.document.close();
+      }catch(e){ toast(e.message||"PDF failed",false); }
     }
 
-    /* ============================= Wiring ============================= */
+    /* ===== Loaders ===== */
     async function loadInbox(){
-      try{
-        $("#rows").innerHTML = `<tr><td class="empty" colspan="5">Loading…</td></tr>`;
-        const limit = Number($("#limitSelect").value||20);
-        const data = await fetchInbox(limit);
-        renderRows(data?.items||data?.data||[]);
-      }catch(e){
-        $("#rows").innerHTML = `<tr><td class="empty" colspan="5">Error loading inbox.</td></tr>`;
-        toast(`Inbox: ${e.message||e}`, false);
-      }
+      try{ $("#rows").innerHTML=`<tr><td class="empty" colspan="6">Loading…</td></tr>`;
+        const limit=Number($("#limitSelect").value||20); const data=await fetchInbox(limit); renderRows(data?.items||[]); }
+      catch(e){ $("#rows").innerHTML=`<tr><td class="empty" colspan="6">Error loading inbox.</td></tr>`; toast(e.message||"Failed to load inbox",false); }
     }
     async function loadReports(){
-      try{
-        $("#reportsRows").innerHTML = `<tr><td class="empty" colspan="5">Loading…</td></tr>`;
-        const data = await listReports(200);
-        renderReports(data?.items||data?.data||[]);
-      }catch(e){
-        $("#reportsRows").innerHTML = `<tr><td class="empty" colspan="5">Error loading reports.</td></tr>`;
-        toast(`Reports: ${e.message||e}`, false);
-      }
+      try{ $("#reportsRows").innerHTML=`<tr><td class="empty" colspan="5">Loading…</td></tr>`;
+        const data=await listReports(200); renderReports(data?.items||[]); }
+      catch(e){ $("#reportsRows").innerHTML=`<tr><td class="empty" colspan="5">Error loading reports.</td></tr>`; toast(e.message||"Failed to load reports",false); }
     }
 
     $("#refreshBtn").addEventListener("click", loadInbox);
     $("#limitSelect").addEventListener("change", loadInbox);
     $("#loadReportsBtn").addEventListener("click", loadReports);
-
-    // first load
     loadInbox();
   </script>
 </body>
