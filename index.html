@@ -415,7 +415,7 @@ async function downloadPDF(report) {
     const athleteName = report.athlete_name || "—";
     const athleteEmail = report.athlete_email || "—";
     const boat = report.boat || "—";
-    const created = pretty(report.created_at);
+    const created = prettyDate(report.created_at);
     const jobId = report.job_id || "—";
 
     const headerBlock = `
