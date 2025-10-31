@@ -429,20 +429,36 @@ async function downloadPDF(report) {
 </head>
 <body>
   <div class="sheet">
-    <div class="pdf-header">
-      <div class="brand">
-        ${logo}
-        <div class="title">RowXL — Crew Analysis Report</div>
-      </div>
-      <div class="meta">
-        <div class="label">Athlete</div><div>${athleteName}</div>
-        <div class="label">Email</div><div>${athleteEmail}</div>
-        <div class="label">Coach</div><div>${coach}</div>
-        <div class="label">Boat</div><div>${boat}</div>
-        <div class="label">Created</div><div>${createdPretty}</div>
-        <div class="label">Job ID</div><div>${jobId}</div>
-      </div>
-    </div>
+    <<div class="pdf-header">
+  <div class="rxl-brand" style="text-align:center;margin-bottom:8px">
+    <!-- Wordmark + shorter wave -->
+    <svg viewBox="0 0 520 120" width="220" height="auto" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <text x="18" y="70" font-family="Inter,system-ui,-apple-system,Segoe UI,Roboto" font-size="64" font-weight="700" fill="#0b2a45">RowXL</text>
+      <path d="M38 96 C 150 122, 340 68, 458 96" fill="none" stroke="#0b2a45" stroke-width="8" stroke-linecap="round" opacity=".85"/>
+    </svg>
+  </div>
+
+  <h1 style="text-align:center;font-size:20px;margin:0 0 10px;color:#0b2a45">
+    RowXL — Crew Analysis Report
+  </h1>
+
+  <table style="width:100%;border-collapse:separate;border-spacing:0 6px;font-size:12.5px">
+    <tr>
+      <td style="color:#47627a;width:70px">Athlete</td><td><strong>${athleteName}</strong></td>
+      <td style="color:#47627a;width:60px">Email</td><td>${athleteEmail}</td>
+    </tr>
+    <tr>
+      <td style="color:#47627a">Coach</td><td>${coach}</td>
+      <td style="color:#47627a">Boat</td><td>${boat}</td>
+    </tr>
+    <tr>
+      <td style="color:#47627a">Created</td><td>${createdPretty}</td>
+      <td style="color:#47627a">Job ID</td><td>${jobId}</td>
+    </tr>
+  </table>
+
+  <hr style="border:0;border-top:1px solid #e6eef6;margin:12px 0">
+</div>
     ${safe}
   </div>
 </body>
