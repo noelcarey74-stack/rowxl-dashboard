@@ -29,7 +29,7 @@
 
     table{
       width:100%; border-collapse:collapse; overflow:hidden; border-radius:10px;
-      table-layout:fixed; /* prevents wide content from blowing layout */
+      table-layout:fixed;
     }
     th,td{ padding:12px 10px; border-bottom:1px solid var(--outline); vertical-align:middle }
     th{ background:#0e294c; text-align:left; color:#cfe2ff; font-weight:600 }
@@ -133,7 +133,7 @@
         <thead>
           <tr>
             <th style="width:30%">Title</th>
-            <th style="width:22%">Athlete</th>
+            <th style="width:22%">Athlete (name • email • user id)</th><!-- updated -->
             <th style="width:16%">Status</th>
             <th style="width:16%">Created</th>
             <th style="width:16%">Actions</th>
@@ -243,9 +243,9 @@
             coach_name: coach,
             coach_notes: text,
             boat,
-            video_url: null,        // <— no video in saved report
-            file_path: null,        // <— don’t persist clip path
-            include_video: false,   // <— hint for your function (ignored if unknown)
+            video_url: null,
+            file_path: null,
+            include_video: false,
             athlete_user_id: it.user_id || it.athlete_user_id || null,
             auto_share: false,
             delete_on_finish: false
@@ -272,7 +272,7 @@
       }
     }
 
-    /* ===== Render: saved reports ===== */
+    /* ===== Render: saved reports (updated to show name + email + UUID) ===== */
     function renderReports(items){
       const tbody=$("#reportsRows"); tbody.innerHTML="";
       if(!items?.length){ tbody.innerHTML=`<tr><td class="empty" colspan="5">No reports found.</td></tr>`; return; }
@@ -286,18 +286,41 @@
         const createdCell=document.createElement("td");
         const actionsCell=document.createElement("td"); actionsCell.className="row-actions";
 
-        // show a short title (last path segment if present)
+        // Title (last path segment if present)
         const displayTitle=(it.title||it.path||it.saved_url||"report").split("/").slice(-1)[0];
         const titleDiv=document.createElement("div");
         titleDiv.className="ellipsis";
-        titleDiv.title=displayTitle;        // hover shows full
-        titleDiv.textContent=displayTitle;  // trimmed in cell
+        titleDiv.title=displayTitle;
+        titleDiv.textContent=displayTitle;
         titleCell.appendChild(titleDiv);
 
-        athleteCell.textContent = it.athlete_user_id || "—";
+        // Athlete (name • email • user id)
+        const nm = it.athlete_name || "";
+        const em = it.athlete_email || "";
+        const uid = it.athlete_user_id || it.user_id || "";
+
+        if (nm || em){
+          const nameDiv  = document.createElement("div");
+          const emailDiv = document.createElement("div");
+          const uidDiv   = document.createElement("div");
+          nameDiv.textContent  = nm || "—";
+          emailDiv.textContent = em || "—";
+          emailDiv.className   = "tiny";
+          uidDiv.textContent   = uid || "—";
+          uidDiv.className     = "tiny";
+          uidDiv.style.opacity = 0.85;
+          athleteCell.append(nameDiv, emailDiv, uidDiv);
+        } else {
+          const uidDiv = document.createElement("div");
+          uidDiv.textContent = uid || "—";
+          uidDiv.className   = "tiny";
+          athleteCell.appendChild(uidDiv);
+        }
+
         statusCell.textContent  = it.status || "done";
         createdCell.textContent = prettyDate(it.created_at);
 
+        // Actions
         const openBtn=document.createElement("a");
         openBtn.className="btn small";
         openBtn.textContent="Open";
@@ -318,17 +341,16 @@
         const pdfBtn=document.createElement("button");
         pdfBtn.className="btn small";
         pdfBtn.textContent="PDF";
-        pdfBtn.onclick=()=>downloadPDF(it);
+        pdfBtn.onclick=()=>downloadPDF(it); // it includes athlete fields
 
         const shareBtn=document.createElement("button");
         shareBtn.className="btn small primary";
         shareBtn.textContent="Share";
         shareBtn.onclick=async()=>{
           const def=($("#defaultAthlete").value||"").trim();
-          const athleteId=it.athlete_user_id || def;
+          const athleteId=it.athlete_user_id || it.user_id || def;
           if(!athleteId) return toast("Enter athlete UUID (row or default)",false);
 
-          // NOTE: sharing the report link ONLY (no video link inside the report)
           const url=it.saved_url||it.public_url;
           if (!url) return toast("No URL on this report.", false);
 
@@ -367,7 +389,7 @@
       }
     }
 
-    /* ===== PDF helper ===== */
+    /* ===== PDF helper (updated: includes athlete name/email/UUID) ===== */
     async function downloadPDF(report){
       try{
         const url=report.saved_url||report.public_url; if(!url) throw new Error("No saved URL on report.");
@@ -378,14 +400,36 @@
           .replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>")
           .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\*(.*?)\*/g,"<em>$1</em>").replace(/\n/g,"<br/>");
 
+        // athlete info (if present)
+        const aName  = report.athlete_name || "—";
+        const aEmail = report.athlete_email || "—";
+        const aUuid  = report.athlete_user_id || report.user_id || "—";
+
         const html=`<!doctype html><html><head><meta charset="utf-8"><title>${report.title||"RowXL Report"}</title>
-<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;margin:0;background:#f7fbff}
-.header{background:#0a1a2f;color:#fff;padding:24px 18px;text-align:center}.wrap{max-width:800px;margin:24px auto;background:#fff;border:1px solid #e3edf7;border-radius:14px;box-shadow:0 6px 20px rgba(10,26,47,.06)}.inner{padding:24px}
-h1,h2,h3{color:#0a1a2f;margin:0 0 8px}.meta{color:#335;font-size:14px;margin-bottom:12px}hr{border:0;border-top:1px solid #e5effa;margin:18px 0}
-@media print{.wrap{box-shadow:none;border:0}body{background:#fff}}</style></head><body>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;margin:0;background:#f7fbff}
+  .header{background:#0a1a2f;color:#fff;padding:24px 18px;text-align:center}
+  .wrap{max-width:800px;margin:24px auto;background:#fff;border:1px solid #e3edf7;border-radius:14px;box-shadow:0 6px 20px rgba(10,26,47,.06)}
+  .inner{padding:24px}
+  h1,h2,h3{color:#0a1a2f;margin:0 0 8px}
+  .meta{color:#335;font-size:14px;margin-bottom:12px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;margin:8px 0 12px}
+  hr{border:0;border-top:1px solid #e5effa;margin:18px 0}
+  @media print{.wrap{box-shadow:none;border:0}body{background:#fff}}
+</style></head><body>
 <div class="header"><div style="font-weight:600">Performance Coaching Report</div></div>
-<div class="wrap"><div class="inner"><h2>${(report.title||"RowXL Report").split("/").slice(-1)[0]}</h2>
-<div class="meta">Coach: ${$("#coachInput").value||"—"} • Created: ${prettyDate(report.created_at)}</div><hr/><div>${safe}</div></div></div>
+<div class="wrap"><div class="inner">
+  <h2>${(report.title||"RowXL Report").split("/").slice(-1)[0]}</h2>
+  <div class="grid">
+    <div><strong>Coach:</strong> ${$("#coachInput").value||"—"}</div>
+    <div><strong>Created:</strong> ${prettyDate(report.created_at)}</div>
+    <div><strong>Athlete:</strong> ${aName}</div>
+    <div><strong>Email:</strong> ${aEmail}</div>
+    <div><strong>Athlete UUID:</strong> ${aUuid}</div>
+  </div>
+  <hr/>
+  <div>${safe}</div>
+</div></div>
 <script>window.onload=()=>setTimeout(()=>window.print(),300);<\/script></body></html>`;
         const win=window.open("","_blank"); win.document.open(); win.document.write(html); win.document.close();
       }catch(e){ toast(e.message||"PDF failed",false); }
