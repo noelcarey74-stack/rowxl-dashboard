@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>RowXL — Program Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb;
+      --muted:#9fb5d1; --outline:#1e3a5f; --brand:#0e3a73;
+    }
+    *{ box-sizing:border-box }
+    body{ margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif }
+    .wrap{ max-width:1100px; margin:40px auto; padding:0 20px }
+    h1{ margin:0 0 18px; font-size:28px }
+
+    .panel{ background:var(--panel); border:1px solid var(--outline); border-radius:10px; padding:14px; margin-bottom:18px }
+
+    .grid{ display:grid; grid-template-columns:repeat(12,1fr); gap:12px }
+    .col-12{ grid-column:span 12 }
+    .col-6{ grid-column:span 6 }
+    .col-4{ grid-column:span 4 }
+    .col-3{ grid-column:span 3 }
+    .col-2{ grid-column:span 2 }
+
+    .field{ display:flex; flex-direction:column }
+    label{ font-size:12px; color:var(--muted); margin:0 0 4px }
+
+    input,select,button,textarea{
+      background:var(--panel2); color:var(--text); border:1px solid var(--outline);
+      border-radius:8px; padding:8px 10px; outline:none
+    }
+    textarea{ min-height:90px; resize:vertical }
+    input::placeholder,textarea::placeholder{ color:#7fa1cc }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+    .btn{ padding:10px 12px; border:1px solid var(--outline); border-radius:8px; text-decoration:none; color:#e9f0fb; background:transparent; cursor:pointer }
+    .btn.primary{ background:var(--brand); border-color:#205b9a }
+    .btn.danger{ border-color:#7a2b2b; background:#3b1d1d }
+    .btn.small{ padding:6px 8px; font-size:12px }
+    .tiny{ font-size:12px; color:var(--muted) }
+
+    .jsonbox{ background:#0b2242; border:1px dashed var(--outline); border-radius:10px; padding:10px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12.5px; white-space:pre-wrap; color:#cfe2ff }
+
+    table{ width:100%; border-collapse:collapse; overflow:hidden; border-radius:10px; table-layout:fixed }
+    th,td{ padding:12px 10px; border-bottom:1px solid var(--outline); vertical-align:middle }
+    th{ background:#0e294c; text-align:left; color:#cfe2ff; font-weight:600 }
+    tr:hover td{ background:#0e2543 }
+    .ellipsis{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+
+    .toast{ position:fixed; right:14px; bottom:14px; background:#113057; border:1px solid var(--outline); padding:10px 12px; border-radius:10px; display:none }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h1>RowXL — Program Builder</h1>
+      <div class="tiny" style="padding:6px 10px;border:1px solid var(--outline);border-radius:999px;background:var(--panel2)">
+        Testing mode (no sign-in)
+      </div>
+    </div>
+
+    <!-- ===== Builder form ===== -->
+    <div class="panel">
+      <div class="grid">
+        <div class="col-4 field">
+          <label>Category</label>
+          <select id="category">
+            <option>Junior</option>
+            <option>Intermediate</option>
+            <option>Senior</option>
+            <option selected>Masters</option>
+          </select>
+        </div>
+        <div class="col-4 field">
+          <label>Gender</label>
+          <select id="gender">
+            <option>Male</option>
+            <option>Female</option>
+            <option selected>Mixed</option>
+          </select>
+        </div>
+        <div class="col-4 field">
+          <label>Boat Class (optional)</label>
+          <select id="boat">
+            <option value="">—</option>
+            <option>8+</option><option>4+</option><option>4x</option><option>4x-</option><option>4-</option>
+            <option>2x</option><option>2-</option><option>1x</option>
+          </select>
+        </div>
+
+        <div class="col-3 field">
+          <label>Start Date</label>
+          <input id="start" type="date" />
+        </div>
+        <div class="col-3 field">
+          <label>Finish Date</label>
+          <input id="finish" type="date" />
+        </div>
+        <div class="col-3 field">
+          <label>Intensity (%)</label>
+          <input id="intensity" type="range" min="60" max="100" value="75" />
+          <div class="tiny"><span id="intensityOut">75</span>% (guides volume & pace)</div>
+        </div>
+        <div class="col-3 field">
+          <label>Optional Athlete UUID</label>
+          <input id="athlete" placeholder="Attach to athlete (optional)" />
+        </div>
+
+        <!-- Weekly plan: Mon–Sun dropdowns -->
+        <div class="col-12">
+          <div class="row" style="gap:12px;align-items:flex-end">
+            <div class="field">
+              <label>Mon</label>
+              <select class="dow">
+                <option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Tue</label>
+              <select class="dow">
+                <option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Wed</label>
+              <select class="dow">
+                <option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Thu</label>
+              <select class="dow">
+                <option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Fri</label>
+              <select class="dow">
+                <option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Sat</label>
+              <select class="dow">
+                <option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Sun</label>
+              <select class="dow">
+                <option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option>
+              </select>
+            </div>
+          </div>
+          <div class="tiny" style="margin-top:6px">Pick the main training mode you can access each day. We can layer content later.</div>
+        </div>
+
+        <div class="col-12 field">
+          <label>Notes (optional)</label>
+          <textarea id="notes" placeholder="Context, availability, event target, injuries, facilities…"></textarea>
+        </div>
+
+        <div class="col-12 row" style="justify-content:space-between">
+          <div class="row" style="gap:8px">
+            <button id="generateBtn" class="btn primary">Generate Program</button>
+            <button id="resetBtn" class="btn">Reset</button>
+          </div>
+          <div class="tiny">On “Generate”, we’ll create a markdown program and save it like your reports.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payload Preview -->
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="tiny">JSON payload preview (what we send to the Edge function)</div>
+        <button id="copyJsonBtn" class="btn small">Copy JSON</button>
+      </div>
+      <pre id="payload" class="jsonbox">{}</pre>
+      <div id="missingFnWarn" class="tiny" style="display:none;margin-top:8px;color:#ffc7c7"></div>
+    </div>
+
+    <!-- Saved Programs -->
+    <h2 style="margin:18px 0 10px">Saved Programs</h2>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:10px">
+        <button id="loadProgramsBtn" class="btn">Load programs</button>
+        <div class="tiny">Opens like reports (signed link). We’ll polish templates later.</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32%">Title</th>
+            <th style="width:16%">Category</th>
+            <th style="width:12%">Gender</th>
+            <th style="width:12%">Intensity</th>
+            <th style="width:16%">Created</th>
+            <th style="width:12%">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="progRows"><tr><td class="tiny" colspan="6" style="padding:14px;color:#9fb5d1">No programs loaded.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    /* ===== CONFIG (testing, mirrors your other pages) ===== */
+    const SUPABASE_URL  = "https://cketlapkaqmhtmthxozu.supabase.co";
+    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZXRsYXBrYXFtaHRtdGh4b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NjIwMzgsImV4cCI6MjA3NzMzODAzOH0.wfmjPBb-7cNpmlV2JByRHGAwkKjsrK7fHd2D7wlf5oA";
+    const COACH_SECRET  = ""; // not required for programs (leave blank unless you secure endpoint)
+
+    /* ===== Helpers ===== */
+    const $ = s => document.querySelector(s);
+    const toast = (m, ok=true)=>{ const t=$("#toast"); t.textContent=m; t.style.display="block"; t.style.borderColor=ok?"#1d5a38":"#8b2a2a"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",2400); };
+    const fn = n => `${SUPABASE_URL}/functions/v1/${n}`;
+    async function _fetch(name, init){
+      init = init || {};
+      init.headers = { ...(init.headers||{}), "Content-Type":"application/json", "Authorization":`Bearer ${SUPABASE_ANON}` };
+      if (COACH_SECRET) init.headers["x-coach-secret"] = COACH_SECRET;
+      const res = await fetch(fn(name), init);
+      if (!res.ok) {
+        const txt = await res.text().catch(()=> "");
+        if(res.status===404){ const w=$("#missingFnWarn"); if(w){w.style.display="block"; w.textContent=`Missing Edge Function “${name}”. Deploy with: supabase functions deploy ${name}`;} }
+        throw new Error(`${name} ${res.status}: ${txt||"error"}`);
+      }
+      const ct = res.headers.get("content-type")||"";
+      return ct.includes("application/json") ? res.json() : res.text();
+    }
+
+    /* ===== Form wiring ===== */
+    const DOWS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    const payloadBox = $("#payload");
+    const dows = [...document.querySelectorAll("select.dow")];
+    const intensity = $("#intensity");
+    const intensityOut = $("#intensityOut");
+
+    // default dates (today → +6 weeks)
+    const todayISO = new Date().toISOString().slice(0,10);
+    const plus6 = new Date(); plus6.setDate(plus6.getDate()+42);
+    $("#start").value = todayISO;
+    $("#finish").value = plus6.toISOString().slice(0,10);
+
+    intensity.addEventListener("input", ()=> intensityOut.textContent = intensity.value);
+
+    function currentPayload(){
+      const schedule = {};
+      dows.forEach((sel, i)=> schedule[DOWS[i]] = sel.value); // e.g. {Mon:"Water", ...}
+
+      const out = {
+        version: 1,
+        category: $("#category").value,           // Junior | Intermediate | Senior | Masters
+        gender: $("#gender").value,               // Male | Female | Mixed
+        boat_class: $("#boat").value || null,     // optional
+        start_date: $("#start").value,            // YYYY-MM-DD
+        finish_date: $("#finish").value,          // YYYY-MM-DD
+        weekly_schedule: schedule,                // {Mon: "Water"|"Erg"|"Weights"|"Rest", ...}
+        intensity_percent: Number($("#intensity").value),  // 60–100
+        notes: $("#notes").value.trim() || null,  // optional
+        athlete_user_id: ($("#athlete").value.trim() || null) // optional attachment for your DB
+      };
+      return out;
+    }
+
+    function refreshPreview(){
+      payloadBox.textContent = JSON.stringify(currentPayload(), null, 2);
+    }
+    document.querySelectorAll("input,select,textarea").forEach(el => el.addEventListener("input", refreshPreview));
+    refreshPreview();
+
+    /* ===== Actions ===== */
+    $("#copyJsonBtn").onclick = async ()=> {
+      try{ await navigator.clipboard.writeText(payloadBox.textContent); toast("Payload copied ✔"); }
+      catch(e){ toast("Copy failed", false); }
+    };
+
+    $("#resetBtn").onclick = ()=> {
+      $("#category").value = "Masters";
+      $("#gender").value = "Mixed";
+      $("#boat").value = "";
+      $("#start").value = todayISO;
+      $("#finish").value = plus6.toISOString().slice(0,10);
+      $("#intensity").value = 75; intensityOut.textContent = "75";
+      $("#athlete").value = "";
+      $("#notes").value = "";
+      dows.forEach(sel => sel.value = "Rest");
+      refreshPreview();
+    };
+
+    $("#generateBtn").onclick = async ()=> {
+      try{
+        const p = currentPayload();
+        // quick checks
+        if (!p.start_date || !p.finish_date) return toast("Pick start & finish dates", false);
+        if (new Date(p.finish_date) <= new Date(p.start_date)) return toast("Finish must be after start", false);
+
+        const res = await _fetch("programs-generate", { method:"POST", body: JSON.stringify(p) });
+        if (res?.ok){
+          toast("Program created ✔");
+          // optional: auto-load list
+          await loadPrograms();
+        }else{
+          throw new Error(res?.error || "Failed");
+        }
+      }catch(e){ toast(e.message || "Error", false); }
+    };
+
+    // Saved programs table (list/open/copy/pdf/delete)
+    const progTbody = $("#progRows");
+    async function loadPrograms(){
+      try{
+        progTbody.innerHTML = `<tr><td class="tiny" colspan="6" style="padding:14px">Loading…</td></tr>`;
+        const data = await _fetch("programs-list", { method:"GET" });
+        const items = data?.items || [];
+        progTbody.innerHTML = "";
+        if (!items.length){
+          progTbody.innerHTML = `<tr><td class="tiny" colspan="6" style="padding:14px">No programs found.</td></tr>`;
+          return;
+        }
+        for(const it of items){
+          const tr = document.createElement("tr");
+
+          const tdTitle = document.createElement("td");
+          tdTitle.innerHTML = `<div class="ellipsis" title="${(it.title||"program")}">${(it.title||"program")}</div>`;
+
+          const tdCat = document.createElement("td"); tdCat.textContent = it.category || "—";
+          const tdGen = document.createElement("td"); tdGen.textContent = it.gender || "—";
+          const tdInt = document.createElement("td"); tdInt.textContent = (it.intensity_percent ?? "—") + (it.intensity_percent ? "%" : "");
+          const tdDate = document.createElement("td"); tdDate.textContent = it.created_at ? new Date(it.created_at).toLocaleString() : "—";
+
+          const tdAct = document.createElement("td");
+          const open = document.createElement("a");
+          open.className="btn small"; open.textContent="Open"; open.target="_blank"; open.rel="noopener";
+          open.href = it.saved_url || it.public_url || "#";
+
+          const copy = document.createElement("button");
+          copy.className="btn small"; copy.textContent="Copy link";
+          copy.onclick = async ()=>{ try{
+            const link = it.saved_url || it.public_url; if(!link) throw new Error("No link");
+            await navigator.clipboard.writeText(link); toast("Link copied ✔");
+          }catch(e){ toast(e.message||"Copy failed",false); } };
+
+          const del = document.createElement("button");
+          del.className="btn small danger"; del.textContent="Delete";
+          del.onclick = async ()=> {
+            if (!confirm(`Delete program “${it.title||"program"}”?`)) return;
+            try{
+              await _fetch("programs-delete", { method:"POST", body: JSON.stringify({ id: it.id, path: it.path, saved_url: it.saved_url }) });
+              tr.remove(); toast("Deleted");
+            }catch(e){ toast(e.message||"Delete failed",false); }
+          };
+
+          tdAct.append(open, " ", copy, " ", del);
+          tr.append(tdTitle, tdCat, tdGen, tdInt, tdDate, tdAct);
+          progTbody.appendChild(tr);
+        }
+      }catch(e){
+        progTbody.innerHTML = `<tr><td class="tiny" colspan="6" style="padding:14px;color:#ffc7c7">Error loading programs.</td></tr>`;
+        toast(e.message||"Load failed", false);
+      }
+    }
+    $("#loadProgramsBtn").onclick = loadPrograms;
+
+    // initial preview done above
+  </script>
+
+  <div id="toast" class="toast"></div>
+</body>
+</html>
