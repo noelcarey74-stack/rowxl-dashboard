@@ -375,51 +375,67 @@ async function downloadPDF(report){
   try{
     const url = report.saved_url || report.public_url;
     if (!url) throw new Error("No saved URL on report.");
+
+    // Load markdown body
     const md = await (await fetch(url)).text();
 
     // very small markdown → html pass
     const safe = md
       .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-      .replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>")
-      .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\*(.*?)\*/g,"<em>$1</em>").replace(/\n/g,"<br/>");
+      .replace(/^### (.*)$/gm,"<h3>$1</h3>")
+      .replace(/^## (.*)$/gm,"<h2>$1</h2>")
+      .replace(/^# (.*)$/gm,"<h1>$1</h1>")
+      .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g,"<em>$1</em>")
+      .replace(/\n/g,"<br/>");
 
-    const title = (report.title || report.path || "RowXL Report").split("/").slice(-1)[0];
-
+    // Pull header fields from the report row we already have in the table
+    const title        = (report.title || report.path || "RowXL Report").split("/").slice(-1)[0];
     const coach        = ($("#coachInput").value || "—");
     const athleteName  = report.athlete_name  || "—";
     const athleteEmail = report.athlete_email || "—";
     const boat         = report.boat || "—";
-    const created      = prettyDate(report.created_at);
-    const jobId        = report.job_id || report.jobId || "—";
+    const created      = report.created_at ? new Date(report.created_at).toLocaleString() : "—";
+    const jobId        = report.job_id || report.jobId || "—";  // accept both
 
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
+    const html = `<!doctype html><html><head><meta charset="utf-8">
+<title>${title}</title>
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;margin:0;background:#f7fbff}
-.header{background:#0a1a2f;color:#fff;padding:24px 18px;text-align:center}
-.wrap{max-width:800px;margin:24px auto;background:#fff;border:1px solid #e3edf7;border-radius:14px;box-shadow:0 6px 20px rgba(10,26,47,.06)}
-.inner{padding:24px}
-h1,h2,h3{color:#0a1a2f;margin:0 0 8px}
-.meta{color:#335;font-size:14px;margin-bottom:12px}
-.meta b{color:#0a1a2f}
-hr{border:0;border-top:1px solid #e5effa;margin:18px 0}
-@media print{.wrap{box-shadow:none;border:0}body{background:#fff}}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;margin:0;background:#f7fbff}
+  .header{background:#0a1a2f;color:#fff;padding:20px 18px}
+  .wrap{max-width:800px;margin:20px auto;background:#fff;border:1px solid #e3edf7;border-radius:14px;box-shadow:0 6px 20px rgba(10,26,47,.06)}
+  .inner{padding:24px}
+  h1,h2,h3{color:#0a1a2f;margin:0 0 8px}
+  .meta{color:#335;font-size:14px;margin:10px 0 12px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}
+  .label{color:#567;font-size:12px}
+  hr{border:0;border-top:1px solid #e5effa;margin:18px 0}
+  @media print{.wrap{box-shadow:none;border:0}body{background:#fff}}
 </style></head><body>
-<div class="header"><div style="font-weight:600">Performance Coaching Report</div></div>
-<div class="wrap"><div class="inner">
-  <h2>${title}</h2>
-  <div class="meta">
-    <b>Athlete:</b> ${athleteName} &nbsp;•&nbsp; <b>Email:</b> ${athleteEmail}<br/>
-    <b>Coach:</b> ${coach} &nbsp;•&nbsp; <b>Boat:</b> ${boat} &nbsp;•&nbsp; <b>Created:</b> ${created}<br/>
-    <b>Job ID:</b> ${jobId}
+  <div class="header">
+    <div style="font-weight:600;font-size:16px">Performance Coaching Report</div>
   </div>
-  <hr/>
-  <div>${safe}</div>
-</div></div>
-<script>window.onload=()=>setTimeout(()=>window.print(),300);<\/script></body></html>`;
+  <div class="wrap"><div class="inner">
+    <h2>${title}</h2>
+    <div class="grid">
+      <div><div class="label">Athlete</div>${athleteName}</div>
+      <div><div class="label">Email</div>${athleteEmail}</div>
+      <div><div class="label">Coach</div>${coach}</div>
+      <div><div class="label">Boat</div>${boat}</div>
+      <div><div class="label">Created</div>${created}</div>
+      <div><div class="label">Job ID</div>${jobId}</div>
+    </div>
+    <hr/>
+    <div>${safe}</div>
+  </div></div>
+  <script>window.onload=()=>setTimeout(()=>window.print(),300);<\/script>
+</body></html>`;
 
-    const win = window.open("", "_blank");
+    const win = window.open("","_blank");
     win.document.open(); win.document.write(html); win.document.close();
-  }catch(e){ toast(e.message || "PDF failed", false); }
+  }catch(e){
+    toast(e.message || "PDF failed", false);
+  }
 }
 
     /* ===== Loaders ===== */
