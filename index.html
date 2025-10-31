@@ -370,26 +370,29 @@
       }
     }
 
-    /* ===== PDF helper (with Athlete name + email in header) ===== */
-    async function downloadPDF(report){
-      try{
-        const url=report.saved_url||report.public_url; if(!url) throw new Error("No saved URL on report.");
-        const md=await (await fetch(url)).text();
+   /* ===== PDF helper (with Athlete name + email + Job ID in header) ===== */
+async function downloadPDF(report){
+  try{
+    const url = report.saved_url || report.public_url;
+    if (!url) throw new Error("No saved URL on report.");
+    const md = await (await fetch(url)).text();
 
-        // very small markdown → html pass
-        const safe=md.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-          .replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>")
-          .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\*(.*?)\*/g,"<em>$1</em>").replace(/\n/g,"<br/>");
+    // very small markdown → html pass
+    const safe = md
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>")
+      .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\*(.*?)\*/g,"<em>$1</em>").replace(/\n/g,"<br/>");
 
-        const title=(report.title||report.path||"RowXL Report").split("/").slice(-1)[0];
+    const title = (report.title || report.path || "RowXL Report").split("/").slice(-1)[0];
 
-        const coach = ($("#coachInput").value||"—");
-        const athleteName = report.athlete_name || "—";
-        const athleteEmail = report.athlete_email || "—";
-        const boat = report.boat || "—";
-        const created = prettyDate(report.created_at);
+    const coach        = ($("#coachInput").value || "—");
+    const athleteName  = report.athlete_name  || "—";
+    const athleteEmail = report.athlete_email || "—";
+    const boat         = report.boat || "—";
+    const created      = prettyDate(report.created_at);
+    const jobId        = report.job_id || report.jobId || "—";
 
-        const html=`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;margin:0;background:#f7fbff}
 .header{background:#0a1a2f;color:#fff;padding:24px 18px;text-align:center}
@@ -406,16 +409,18 @@ hr{border:0;border-top:1px solid #e5effa;margin:18px 0}
   <h2>${title}</h2>
   <div class="meta">
     <b>Athlete:</b> ${athleteName} &nbsp;•&nbsp; <b>Email:</b> ${athleteEmail}<br/>
-    <b>Coach:</b> ${coach} &nbsp;•&nbsp; <b>Boat:</b> ${boat} &nbsp;•&nbsp; <b>Created:</b> ${created}
+    <b>Coach:</b> ${coach} &nbsp;•&nbsp; <b>Boat:</b> ${boat} &nbsp;•&nbsp; <b>Created:</b> ${created}<br/>
+    <b>Job ID:</b> ${jobId}
   </div>
   <hr/>
   <div>${safe}</div>
 </div></div>
 <script>window.onload=()=>setTimeout(()=>window.print(),300);<\/script></body></html>`;
 
-        const win=window.open("","_blank"); win.document.open(); win.document.write(html); win.document.close();
-      }catch(e){ toast(e.message||"PDF failed",false); }
-    }
+    const win = window.open("", "_blank");
+    win.document.open(); win.document.write(html); win.document.close();
+  }catch(e){ toast(e.message || "PDF failed", false); }
+}
 
     /* ===== Loaders ===== */
     async function loadInbox(){
