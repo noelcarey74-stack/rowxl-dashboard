@@ -202,12 +202,8 @@
         <tbody id="progRows"><tr><td class="tiny" colspan="6" style="padding:14px;color:#9fb5d1">No programs loaded.</td></tr></tbody>
       </table>
     </div>
-  </div>
 
-  <div id="toast" class="toast"></div>
-
-  <script type="module">
-        <!-- Inbox -->
+    <!-- Inbox -->
     <h2 style="margin:18px 0 10px">Inbox</h2>
     <div class="panel">
       <div class="row" style="justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px">
@@ -220,7 +216,6 @@
         </div>
         <div class="tiny">Shows recent uploads, reports, and generated programs.</div>
       </div>
-
       <table>
         <thead>
           <tr>
@@ -232,16 +227,19 @@
           </tr>
         </thead>
         <tbody id="inboxRows">
-          <tr>
-            <td class="tiny" colspan="5" style="padding:14px;color:#9fb5d1">No items loaded.</td>
-          </tr>
+          <tr><td class="tiny" colspan="5" style="padding:14px;color:#9fb5d1">No items loaded.</td></tr>
         </tbody>
       </table>
     </div>
-    /* ===== CONFIG (testing, mirrors your other pages) ===== */
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    /* ===== CONFIG ===== */
     const SUPABASE_URL  = "https://cketlapkaqmhtmthxozu.supabase.co";
     const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZXRsYXBrYXFtaHRtdGh4b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NjIwMzgsImV4cCI6MjA3NzMzODAzOH0.wfmjPBb-7cNpmlV2JByRHGAwkKjsrK7fHd2D7wlf5oA";
-    const COACH_SECRET  = ""; // not required for programs (leave blank unless you secure endpoint)
+    const COACH_SECRET  = ""; // optional header for secured endpoints
 
     /* ===== Helpers ===== */
     const $ = s => document.querySelector(s);
@@ -260,6 +258,16 @@
       const ct = res.headers.get("content-type")||"";
       return ct.includes("application/json") ? res.json() : res.text();
     }
+    const sbRest = (pathWithQuery, init) => fetch(`${SUPABASE_URL}/rest/v1/${pathWithQuery}`, {
+      ...init,
+      headers: {
+        ...(init && init.headers ? init.headers : {}),
+        apikey: SUPABASE_ANON,
+        Authorization: `Bearer ${SUPABASE_ANON}`,
+        Prefer: "return=representation",
+        "Content-Type": "application/json"
+      }
+    });
 
     /* ===== Form wiring ===== */
     const DOWS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -268,45 +276,37 @@
     const intensity = $("#intensity");
     const intensityOut = $("#intensityOut");
 
-    // default dates (today → +6 weeks)
     const todayISO = new Date().toISOString().slice(0,10);
     const plus6 = new Date(); plus6.setDate(plus6.getDate()+42);
     $("#start").value = todayISO;
     $("#finish").value = plus6.toISOString().slice(0,10);
-
     intensity.addEventListener("input", ()=> intensityOut.textContent = intensity.value);
 
     function currentPayload(){
       const schedule = {};
-      dows.forEach((sel, i)=> schedule[DOWS[i]] = sel.value); // e.g. {Mon:"Water", ...}
-
-      const out = {
+      dows.forEach((sel, i)=> schedule[DOWS[i]] = sel.value);
+      return {
         version: 1,
-        category: $("#category").value,           // Junior | Intermediate | Senior | Masters
-        gender: $("#gender").value,               // Male | Female | Mixed
-        boat_class: $("#boat").value || null,     // optional
-        start_date: $("#start").value,            // YYYY-MM-DD
-        finish_date: $("#finish").value,          // YYYY-MM-DD
-        weekly_schedule: schedule,                // {Mon: "Water"|"Erg"|"Weights"|"Rest", ...}
-        intensity_percent: Number($("#intensity").value),  // 60–100
-        notes: $("#notes").value.trim() || null,  // optional
-        athlete_user_id: ($("#athlete").value.trim() || null) // optional attachment for your DB
+        category: $("#category").value,
+        gender: $("#gender").value,
+        boat_class: $("#boat").value || null,
+        start_date: $("#start").value,
+        finish_date: $("#finish").value,
+        weekly_schedule: schedule,
+        intensity_percent: Number($("#intensity").value),
+        notes: $("#notes").value.trim() || null,
+        athlete_user_id: ($("#athlete").value.trim() || null)
       };
-      return out;
     }
-
-    function refreshPreview(){
-      payloadBox.textContent = JSON.stringify(currentPayload(), null, 2);
-    }
+    function refreshPreview(){ payloadBox.textContent = JSON.stringify(currentPayload(), null, 2); }
     document.querySelectorAll("input,select,textarea").forEach(el => el.addEventListener("input", refreshPreview));
     refreshPreview();
 
-    /* ===== Actions ===== */
+    /* ===== Builder actions ===== */
     $("#copyJsonBtn").onclick = async ()=> {
       try{ await navigator.clipboard.writeText(payloadBox.textContent); toast("Payload copied ✔"); }
       catch(e){ toast("Copy failed", false); }
     };
-
     $("#resetBtn").onclick = ()=> {
       $("#category").value = "Masters";
       $("#gender").value = "Mixed";
@@ -319,26 +319,18 @@
       dows.forEach(sel => sel.value = "Rest");
       refreshPreview();
     };
-
     $("#generateBtn").onclick = async ()=> {
       try{
         const p = currentPayload();
-        // quick checks
         if (!p.start_date || !p.finish_date) return toast("Pick start & finish dates", false);
         if (new Date(p.finish_date) <= new Date(p.start_date)) return toast("Finish must be after start", false);
-
         const res = await _fetch("programs-generate", { method:"POST", body: JSON.stringify(p) });
-        if (res?.ok){
-          toast("Program created ✔");
-          // optional: auto-load list
-          await loadPrograms();
-        }else{
-          throw new Error(res?.error || "Failed");
-        }
+        if (res?.ok){ toast("Program created ✔"); await loadPrograms(); }
+        else { throw new Error(res?.error || "Failed"); }
       }catch(e){ toast(e.message || "Error", false); }
     };
 
-    // Saved programs table (list/open/copy/pdf/delete)
+    /* ===== Saved Programs list ===== */
     const progTbody = $("#progRows");
     async function loadPrograms(){
       try{
@@ -352,27 +344,22 @@
         }
         for(const it of items){
           const tr = document.createElement("tr");
-
           const tdTitle = document.createElement("td");
           tdTitle.innerHTML = `<div class="ellipsis" title="${(it.title||"program")}">${(it.title||"program")}</div>`;
-
           const tdCat = document.createElement("td"); tdCat.textContent = it.category || "—";
           const tdGen = document.createElement("td"); tdGen.textContent = it.gender || "—";
           const tdInt = document.createElement("td"); tdInt.textContent = (it.intensity_percent ?? "—") + (it.intensity_percent ? "%" : "");
           const tdDate = document.createElement("td"); tdDate.textContent = it.created_at ? new Date(it.created_at).toLocaleString() : "—";
-
           const tdAct = document.createElement("td");
           const open = document.createElement("a");
           open.className="btn small"; open.textContent="Open"; open.target="_blank"; open.rel="noopener";
           open.href = it.saved_url || it.public_url || "#";
-
           const copy = document.createElement("button");
           copy.className="btn small"; copy.textContent="Copy link";
           copy.onclick = async ()=>{ try{
             const link = it.saved_url || it.public_url; if(!link) throw new Error("No link");
             await navigator.clipboard.writeText(link); toast("Link copied ✔");
           }catch(e){ toast(e.message||"Copy failed",false); } };
-
           const del = document.createElement("button");
           del.className="btn small danger"; del.textContent="Delete";
           del.onclick = async ()=> {
@@ -382,7 +369,6 @@
               tr.remove(); toast("Deleted");
             }catch(e){ toast(e.message||"Delete failed",false); }
           };
-
           tdAct.append(open, " ", copy, " ", del);
           tr.append(tdTitle, tdCat, tdGen, tdInt, tdDate, tdAct);
           progTbody.appendChild(tr);
@@ -394,128 +380,75 @@
     }
     $("#loadProgramsBtn").onclick = loadPrograms;
 
-    // initial preview done above
-  </script>
+    /* ===== Inbox (coach_inbox_v) ===== */
+    const inboxTbody = document.getElementById("inboxRows");
+    const autoInbox  = document.getElementById("autoInbox");
+    const loadInboxBtn = document.getElementById("loadInboxBtn");
+    let inboxTimer = null;
 
-  <div id="toast" class="toast"></div>
+    async function loadInbox() {
+      try {
+        inboxTbody.innerHTML = `<tr><td class="tiny" colspan="5" style="padding:14px">Loading…</td></tr>`;
+        const q = `coach_inbox_v?select=id,kind,title,athlete_name,from_user,created_at,public_url,saved_url&order=created_at.desc&limit=50`;
+        const res = await sbRest(q);
+        if (!res.ok) throw new Error(`Inbox ${res.status}`);
+        const items = await res.json();
+        if (!items.length) {
+          inboxTbody.innerHTML = `<tr><td class="tiny" colspan="5" style="padding:14px;color:#9fb5d1">No inbox items.</td></tr>`;
+          return;
+        }
+        inboxTbody.innerHTML = "";
+        for (const it of items) {
+          const tr = document.createElement("tr");
+
+          const tdKind = document.createElement("td");
+          tdKind.textContent = (it.kind || "item").toString();
+
+          const tdTitle = document.createElement("td");
+          tdTitle.innerHTML = `<div class="ellipsis" title="${it.title || "(untitled)"}">${it.title || "(untitled)"}</div>`;
+
+          const tdFrom = document.createElement("td");
+          tdFrom.innerHTML = (it.athlete_name || it.from_user || "—");
+
+          const tdDate = document.createElement("td");
+          tdDate.textContent = it.created_at ? new Date(it.created_at).toLocaleString() : "—";
+
+          const tdAct = document.createElement("td");
+          const link = it.saved_url || it.public_url;
+          const open = document.createElement("a");
+          open.className = "btn small";
+          open.textContent = "Open";
+          open.target = "_blank";
+          open.rel = "noopener";
+          open.href = link || "#";
+          const copy = document.createElement("button");
+          copy.className = "btn small";
+          copy.textContent = "Copy";
+          copy.onclick = async () => {
+            try {
+              if (!link) throw new Error("No link");
+              await navigator.clipboard.writeText(link);
+              toast("Link copied ✔");
+            } catch (e) { toast(e.message || "Copy failed", false); }
+          };
+          tdAct.append(open, " ", copy);
+
+          tr.append(tdKind, tdTitle, tdFrom, tdDate, tdAct);
+          inboxTbody.appendChild(tr);
+        }
+      } catch (e) {
+        inboxTbody.innerHTML = `<tr><td class="tiny" colspan="5" style="padding:14px;color:#ffc7c7">Error loading inbox.</td></tr>`;
+        toast(e.message || "Inbox failed", false);
+      }
+    }
+    loadInboxBtn.onclick = loadInbox;
+    autoInbox.addEventListener("change", () => {
+      if (autoInbox.checked) { loadInbox(); inboxTimer = setInterval(loadInbox, 30000); toast("Auto-refresh on"); }
+      else { clearInterval(inboxTimer); inboxTimer = null; toast("Auto-refresh off"); }
+    });
+
+    // Kick off previews; you can auto-load lists if you like:
+    // loadPrograms(); loadInbox();
+  </script>
 </body>
 </html>
-<script type="module">
-  // ... keep all your existing script above ...
-
-  // ========= Inbox (coach_inbox_v) =========
-  const inboxTbody = document.getElementById("inboxRows");
-  const autoInbox = document.getElementById("autoInbox");
-  const loadInboxBtn = document.getElementById("loadInboxBtn");
-  let inboxTimer = null;
-
-  function sbRest(pathWithQuery, init) {
-    return fetch(`${SUPABASE_URL}/rest/v1/${pathWithQuery}`, {
-      ...init,
-      headers: {
-        ...(init && init.headers ? init.headers : {}),
-        apikey: SUPABASE_ANON,
-        Authorization: `Bearer ${SUPABASE_ANON}`,
-        Prefer: "return=representation",
-        "Content-Type": "application/json"
-      }
-    });
-  }
-
-  async function loadInbox() {
-    try {
-      inboxTbody.innerHTML = `<tr><td class="tiny" colspan="5" style="padding:14px">Loading…</td></tr>`;
-
-      // Pull most recent 50 items from your unified inbox view
-      // Adjust the selected columns to match your coach_inbox_v view
-      const q =
-        `coach_inbox_v` +
-        `?select=id,kind,title,athlete_name,from_user,created_at,public_url,saved_url` +
-        `&order=created_at.desc&limit=50`;
-
-      const res = await sbRest(q);
-      if (!res.ok) throw new Error(`Inbox ${res.status}`);
-      const items = await res.json();
-
-      if (!items.length) {
-        inboxTbody.innerHTML =
-          `<tr><td class="tiny" colspan="5" style="padding:14px;color:#9fb5d1">No inbox items.</td></tr>`;
-        return;
-      }
-
-      inboxTbody.innerHTML = "";
-      for (const it of items) {
-        const tr = document.createElement("tr");
-
-        // Kind
-        const tdKind = document.createElement("td");
-        tdKind.textContent = (it.kind || "item").toString();
-
-        // Title
-        const tdTitle = document.createElement("td");
-        tdTitle.innerHTML =
-          `<div class="ellipsis" title="${it.title || "(untitled)"}">${it.title || "(untitled)"}</div>`;
-
-        // From / Athlete
-        const tdFrom = document.createElement("td");
-        tdFrom.innerHTML = (it.athlete_name || it.from_user || "—");
-
-        // Created
-        const tdDate = document.createElement("td");
-        tdDate.textContent = it.created_at
-          ? new Date(it.created_at).toLocaleString()
-          : "—";
-
-        // Actions
-        const link = it.saved_url || it.public_url;
-        const tdAct = document.createElement("td");
-
-        const open = document.createElement("a");
-        open.className = "btn small";
-        open.textContent = "Open";
-        open.target = "_blank";
-        open.rel = "noopener";
-        open.href = link || "#";
-
-        const copy = document.createElement("button");
-        copy.className = "btn small";
-        copy.textContent = "Copy";
-        copy.onclick = async () => {
-          try {
-            if (!link) throw new Error("No link");
-            await navigator.clipboard.writeText(link);
-            toast("Link copied ✔");
-          } catch (e) {
-            toast(e.message || "Copy failed", false);
-          }
-        };
-
-        tdAct.append(open, " ", copy);
-        tr.append(tdKind, tdTitle, tdFrom, tdDate, tdAct);
-        inboxTbody.appendChild(tr);
-      }
-    } catch (e) {
-      inboxTbody.innerHTML =
-        `<tr><td class="tiny" colspan="5" style="padding:14px;color:#ffc7c7">Error loading inbox.</td></tr>`;
-      toast(e.message || "Inbox failed", false);
-    }
-  }
-
-  loadInboxBtn.onclick = loadInbox;
-
-  autoInbox.addEventListener("change", () => {
-    if (autoInbox.checked) {
-      // Kick off immediately, then every 30s
-      loadInbox();
-      inboxTimer = setInterval(loadInbox, 30000);
-      toast("Auto-refresh on");
-    } else {
-      clearInterval(inboxTimer);
-      inboxTimer = null;
-      toast("Auto-refresh off");
-    }
-  });
-
-  // OPTIONAL: initial inbox load on page open
-  loadInbox();
-</script>
