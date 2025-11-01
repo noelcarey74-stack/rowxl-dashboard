@@ -389,10 +389,12 @@
     async function loadInbox() {
       try {
         inboxTbody.innerHTML = `<tr><td class="tiny" colspan="5" style="padding:14px">Loading…</td></tr>`;
-        const q = `coach_inbox_v?select=id,kind,title,athlete_name,from_user,created_at,public_url,saved_url&order=created_at.desc&limit=50`;
+        // NOTE: from_user removed — not in your view schema
+        const q = `coach_inbox_v?select=id,kind,title,athlete_name,created_at,saved_url,public_url&order=created_at.desc&limit=50`;
         const res = await sbRest(q);
         if (!res.ok) throw new Error(`Inbox ${res.status}`);
         const items = await res.json();
+
         if (!items.length) {
           inboxTbody.innerHTML = `<tr><td class="tiny" colspan="5" style="padding:14px;color:#9fb5d1">No inbox items.</td></tr>`;
           return;
@@ -408,19 +410,21 @@
           tdTitle.innerHTML = `<div class="ellipsis" title="${it.title || "(untitled)"}">${it.title || "(untitled)"}</div>`;
 
           const tdFrom = document.createElement("td");
-          tdFrom.innerHTML = (it.athlete_name || it.from_user || "—");
+          tdFrom.innerHTML = (it.athlete_name || "—");
 
           const tdDate = document.createElement("td");
           tdDate.textContent = it.created_at ? new Date(it.created_at).toLocaleString() : "—";
 
           const tdAct = document.createElement("td");
           const link = it.saved_url || it.public_url;
+
           const open = document.createElement("a");
           open.className = "btn small";
           open.textContent = "Open";
           open.target = "_blank";
           open.rel = "noopener";
           open.href = link || "#";
+
           const copy = document.createElement("button");
           copy.className = "btn small";
           copy.textContent = "Copy";
@@ -431,8 +435,8 @@
               toast("Link copied ✔");
             } catch (e) { toast(e.message || "Copy failed", false); }
           };
-          tdAct.append(open, " ", copy);
 
+          tdAct.append(open, " ", copy);
           tr.append(tdKind, tdTitle, tdFrom, tdDate, tdAct);
           inboxTbody.appendChild(tr);
         }
@@ -442,12 +446,13 @@
       }
     }
     loadInboxBtn.onclick = loadInbox;
+
     autoInbox.addEventListener("change", () => {
       if (autoInbox.checked) { loadInbox(); inboxTimer = setInterval(loadInbox, 30000); toast("Auto-refresh on"); }
       else { clearInterval(inboxTimer); inboxTimer = null; toast("Auto-refresh off"); }
     });
 
-    // Kick off previews; you can auto-load lists if you like:
+    // Optional: auto-load on open
     // loadPrograms(); loadInbox();
   </script>
 </body>
