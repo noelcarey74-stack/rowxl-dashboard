@@ -207,6 +207,37 @@
   <div id="toast" class="toast"></div>
 
   <script type="module">
+        <!-- Inbox -->
+    <h2 style="margin:18px 0 10px">Inbox</h2>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px">
+        <div class="row" style="gap:8px;align-items:center">
+          <button id="loadInboxBtn" class="btn">Refresh</button>
+          <label class="tiny" style="display:flex;gap:6px;align-items:center">
+            <input id="autoInbox" type="checkbox" />
+            Auto-refresh every 30s
+          </label>
+        </div>
+        <div class="tiny">Shows recent uploads, reports, and generated programs.</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:14%">Kind</th>
+            <th style="width:34%">Title</th>
+            <th style="width:22%">From / Athlete</th>
+            <th style="width:18%">Created</th>
+            <th style="width:12%">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="inboxRows">
+          <tr>
+            <td class="tiny" colspan="5" style="padding:14px;color:#9fb5d1">No items loaded.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     /* ===== CONFIG (testing, mirrors your other pages) ===== */
     const SUPABASE_URL  = "https://cketlapkaqmhtmthxozu.supabase.co";
     const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZXRsYXBrYXFtaHRtdGh4b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NjIwMzgsImV4cCI6MjA3NzMzODAzOH0.wfmjPBb-7cNpmlV2JByRHGAwkKjsrK7fHd2D7wlf5oA";
