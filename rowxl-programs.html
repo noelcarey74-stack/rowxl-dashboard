@@ -58,6 +58,12 @@
     #peek .card{ width:min(900px,95vw); max-height:90vh; overflow:auto; background:#0f2747; border:1px solid var(--outline); border-radius:12px; padding:14px }
     #peek h3{ margin:0 0 6px; font-size:16px }
     #peek pre{ white-space:pre-wrap; word-break:break-word; margin:8px 0 0; background:#113057; border:1px solid var(--outline); border-radius:8px; padding:10px; font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace }
+
+    /* Compose modal (manual entry) */
+    #compose{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:9999 }
+    #compose .card{ width:min(900px,95vw); max-height:90vh; overflow:auto; background:#0f2747; border:1px solid var(--outline); border-radius:12px; padding:14px }
+    #compose h3{ margin:0 0 6px; font-size:16px }
+    #compose textarea{ width:100%; background:#113057; color:#e9f0fb; border:1px solid var(--outline); border-radius:8px; padding:10px; font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace }
   </style>
 </head>
 <body>
@@ -164,6 +170,24 @@
     </div>
   </div>
 
+  <!-- Compose modal (manual program entry) -->
+  <div id="compose" role="dialog" aria-modal="true" aria-labelledby="composeTitle">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <h3 id="composeTitle">Compose program</h3>
+        <button class="btn small" onclick="hideCompose()">Close</button>
+      </div>
+      <div class="tiny" style="margin:6px 0 8px;color:#9fb5d1">
+        Paste or type your program (markdown). Click “Save program” to store it in Saved Programs.
+      </div>
+      <textarea id="composeText" rows="18"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+        <button class="btn" onclick="hideCompose()">Cancel</button>
+        <button class="btn primary" id="composeSaveBtn">Save program</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     /* ===== CONFIG (testing mode; no login) ===== */
     const SUPABASE_URL  = "https://cketlapkaqmhtmthxozu.supabase.co";
@@ -233,6 +257,55 @@
     const listPrograms    = (limit=200) => _fetch(`program-list?limit=${limit}`, { method:"GET" });
     const shareProgram    = (payload) => _fetch("program-share", { method:"POST", body: JSON.stringify(payload) });
     const deleteProgram   = (payload) => _fetch("program-delete", { method:"POST", body: JSON.stringify(payload) });
+
+    /* ===== Compose editor (manual — no AI) ===== */
+    let _composeCtx = null;
+    function showCompose(ctx){
+      _composeCtx = ctx; // {title, athlete_user_id, coach_name, athlete_name}
+      $("#composeTitle").textContent = `Compose — ${ctx.title || "Program"}`;
+      $("#composeText").value = [
+        `# ${ctx.title || "RowXL — Training Program"}`,
+        ``,
+        `**Coach:** ${ctx.coach_name || "—"}   |   **Athlete:** ${ctx.athlete_name || "—"}`,
+        `---`,
+        ``,
+        `## Weekly Outline`,
+        `- Mon: `,
+        `- Tue: `,
+        `- Wed: `,
+        `- Thu: `,
+        `- Fri: `,
+        `- Sat: `,
+        `- Sun: `,
+        ``,
+        `## Notes`,
+        `- `
+      ].join("\n");
+      $("#compose").style.display = "flex";
+    }
+    function hideCompose(){ $("#compose").style.display = "none"; _composeCtx = null; }
+    window.hideCompose = hideCompose;
+
+    async function saveComposedProgram(){
+      const btn = $("#composeSaveBtn");
+      if(!btn || !_composeCtx) return;
+      const markdown = $("#composeText").value.trim();
+      if(!markdown){ toast("Nothing to save", false); return; }
+
+      btn.disabled = true; btn.textContent = "Saving…";
+      try{
+        const r = await generateProgram({
+          title: _composeCtx.title || "Program",
+          coach_name: _composeCtx.coach_name || null,
+          athlete_user_id: _composeCtx.athlete_user_id || null,
+          markdown
+        });
+        if (r?.ok) { toast("Program saved ✔"); hideCompose(); }
+        else { throw new Error(r?.error || "Save failed"); }
+      }catch(e){ toast(e.message || "Save failed", false); }
+      finally { btn.disabled = false; btn.textContent = "Save program"; }
+    }
+    $("#composeSaveBtn")?.addEventListener("click", saveComposedProgram);
 
     /* ===== Render: Program Requests ===== */
     function renderRequests(items){
@@ -315,17 +388,19 @@
         const viewBtn=document.createElement("button"); viewBtn.className="btn small ghost"; viewBtn.textContent="Preview";
         viewBtn.onclick=()=> showPeek(it.title || "Program request", fullRequestJSON);
 
-        const genBtn=document.createElement("button"); genBtn.className="btn small primary"; genBtn.textContent="Generate program";
-        genBtn.onclick=async()=>{
-          const coach=(coachInput.value||"").trim();
-          if(!coach) return toast("Enter coach name",false);
-          genBtn.disabled=true; genBtn.textContent="Generating…";
-          try{
-            const body = { ...(p||{}), coach_name: coach, athlete_user_id: (it.athlete_user_id || null) };
-            const r = await generateProgram(body);
-            if (r?.ok){ toast("Program saved ✔"); genBtn.textContent="Generated"; genBtn.disabled=false; }
-            else throw new Error(r?.error||"Failed");
-          }catch(e){ toast(e.message||"Error",false); genBtn.textContent="Generate program"; genBtn.disabled=false; }
+        // Open editor (manual program entry)
+        const genBtn=document.createElement("button");
+        genBtn.className="btn small primary";
+        genBtn.textContent="Generate program";
+        genBtn.title = "Open editor to paste/type the program";
+        genBtn.onclick = () => {
+          const coach = (coachInput.value || "").trim();
+          showCompose({
+            title: it.title || "Program",
+            coach_name: coach || null,
+            athlete_user_id: it.athlete_user_id || null,
+            athlete_name: it.athlete_name || "—"
+          });
         };
 
         const delBtn=document.createElement("button"); delBtn.className="btn small danger"; delBtn.textContent="Delete";
