@@ -5,25 +5,49 @@
   <title>RowXL — Program Builder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{ --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb; --muted:#9fb5d1; --outline:#1e3a5f; --brand:#0e3a73; }
+    :root{
+      --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb;
+      --muted:#9fb5d1; --outline:#1e3a5f; --brand:#0e3a73;
+    }
     *{ box-sizing:border-box }
     body{ margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif }
     .wrap{ max-width:1100px; margin:40px auto; padding:0 20px }
     h1{ margin:0 0 18px; font-size:28px }
+
     .panel{ background:var(--panel); border:1px solid var(--outline); border-radius:10px; padding:14px; margin-bottom:18px }
+
     .grid{ display:grid; grid-template-columns:repeat(12,1fr); gap:12px }
-    .col-12{ grid-column:span 12 } .col-6{ grid-column:span 6 } .col-4{ grid-column:span 4 } .col-3{ grid-column:span 3 } .col-2{ grid-column:span 2 }
-    .field{ display:flex; flex-direction:column } label{ font-size:12px; color:var(--muted); margin:0 0 4px }
-    input,select,button,textarea{ background:var(--panel2); color:var(--text); border:1px solid var(--outline); border-radius:8px; padding:8px 10px; outline:none }
-    textarea{ min-height:90px; resize:vertical } input::placeholder,textarea::placeholder{ color:#7fa1cc }
+    .col-12{ grid-column:span 12 }
+    .col-6{ grid-column:span 6 }
+    .col-4{ grid-column:span 4 }
+    .col-3{ grid-column:span 3 }
+    .col-2{ grid-column:span 2 }
+
+    .field{ display:flex; flex-direction:column }
+    label{ font-size:12px; color:var(--muted); margin:0 0 4px }
+
+    input,select,button,textarea{
+      background:var(--panel2); color:var(--text); border:1px solid var(--outline);
+      border-radius:8px; padding:8px 10px; outline:none
+    }
+    textarea{ min-height:90px; resize:vertical }
+    input::placeholder,textarea::placeholder{ color:#7fa1cc }
+
     .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
     .btn{ padding:10px 12px; border:1px solid var(--outline); border-radius:8px; text-decoration:none; color:#e9f0fb; background:transparent; cursor:pointer }
-    .btn.primary{ background:var(--brand); border-color:#205b9a } .btn.danger{ border-color:#7a2b2b; background:#3b1d1d } .btn.small{ padding:6px 8px; font-size:12px }
+    .btn.primary{ background:var(--brand); border-color:#205b9a }
+    .btn.danger{ border-color:#7a2b2b; background:#3b1d1d }
+    .btn.small{ padding:6px 8px; font-size:12px }
     .tiny{ font-size:12px; color:var(--muted) }
+
     .jsonbox{ background:#0b2242; border:1px dashed var(--outline); border-radius:10px; padding:10px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12.5px; white-space:pre-wrap; color:#cfe2ff }
+
     table{ width:100%; border-collapse:collapse; overflow:hidden; border-radius:10px; table-layout:fixed }
-    th,td{ padding:12px 10px; border-bottom:1px solid var(--outline); vertical-align:middle } th{ background:#0e294c; text-align:left; color:#cfe2ff; font-weight:600 }
-    tr:hover td{ background:#0e2543 } .ellipsis{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+    th,td{ padding:12px 10px; border-bottom:1px solid var(--outline); vertical-align:middle }
+    th{ background:#0e294c; text-align:left; color:#cfe2ff; font-weight:600 }
+    tr:hover td{ background:#0e2543 }
+    .ellipsis{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+
     .toast{ position:fixed; right:14px; bottom:14px; background:#113057; border:1px solid var(--outline); padding:10px 12px; border-radius:10px; display:none }
   </style>
 </head>
@@ -31,7 +55,9 @@
   <div class="wrap">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <h1>RowXL — Program Builder</h1>
-      <div class="tiny" style="padding:6px 10px;border:1px solid var(--outline);border-radius:999px;background:var(--panel2)">Testing mode (no sign-in)</div>
+      <div class="tiny" style="padding:6px 10px;border:1px solid var(--outline);border-radius:999px;background:var(--panel2)">
+        Testing mode (no sign-in)
+      </div>
     </div>
 
     <!-- ===== Builder form ===== -->
@@ -40,13 +66,18 @@
         <div class="col-4 field">
           <label>Category</label>
           <select id="category">
-            <option>Junior</option><option>Intermediate</option><option>Senior</option><option selected>Masters</option>
+            <option>Junior</option>
+            <option>Intermediate</option>
+            <option>Senior</option>
+            <option selected>Masters</option>
           </select>
         </div>
         <div class="col-4 field">
           <label>Gender</label>
           <select id="gender">
-            <option>Male</option><option>Female</option><option selected>Mixed</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option selected>Mixed</option>
           </select>
         </div>
         <div class="col-4 field">
@@ -58,39 +89,35 @@
           </select>
         </div>
 
-        <div class="col-3 field"><label>Start Date</label><input id="start" type="date" /></div>
-        <div class="col-3 field"><label>Finish Date</label><input id="finish" type="date" /></div>
+        <div class="col-3 field">
+          <label>Start Date</label>
+          <input id="start" type="date" />
+        </div>
+        <div class="col-3 field">
+          <label>Finish Date</label>
+          <input id="finish" type="date" />
+        </div>
         <div class="col-3 field">
           <label>Intensity (%)</label>
           <input id="intensity" type="range" min="60" max="100" value="75" />
           <div class="tiny"><span id="intensityOut">75</span>% (guides volume & pace)</div>
         </div>
-        <div class="col-3 field"><label>Optional Athlete UUID</label><input id="athlete" placeholder="Attach to athlete (optional)" /></div>
+        <div class="col-3 field">
+          <label>Optional Athlete UUID</label>
+          <input id="athlete" placeholder="Attach to athlete (optional)" />
+        </div>
 
         <!-- Weekly plan -->
         <div class="col-12">
           <div class="row" style="gap:12px;align-items:flex-end">
-            <div class="field"><label>Mon</label>
-              <select class="dow"><option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option></select>
-            </div>
-            <div class="field"><label>Tue</label>
-              <select class="dow"><option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option></select>
-            </div>
-            <div class="field"><label>Wed</label>
-              <select class="dow"><option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option></select>
-            </div>
-            <div class="field"><label>Thu</label>
-              <select class="dow"><option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option></select>
-            </div>
-            <div class="field"><label>Fri</label>
-              <select class="dow"><option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option></select>
-            </div>
-            <div class="field"><label>Sat</label>
-              <select class="dow"><option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option></select>
-            </div>
-            <div class="field"><label>Sun</label>
-              <select class="dow"><option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option></select>
-            </div>
+            ${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=>`
+              <div class="field">
+                <label>${d}</label>
+                <select class="dow">
+                  <option>Water</option><option>Erg</option><option>Weights</option><option selected>Rest</option>
+                </select>
+              </div>
+            `).join("")}
           </div>
           <div class="tiny" style="margin-top:6px">Pick the main training mode you can access each day. We can layer content later.</div>
         </div>
@@ -130,8 +157,12 @@
       <table>
         <thead>
           <tr>
-            <th style="width:32%">Title</th><th style="width:16%">Category</th><th style="width:12%">Gender</th>
-            <th style="width:12%">Intensity</th><th style="width:16%">Created</th><th style="width:12%">Actions</th>
+            <th style="width:32%">Title</th>
+            <th style="width:16%">Category</th>
+            <th style="width:12%">Gender</th>
+            <th style="width:12%">Intensity</th>
+            <th style="width:16%">Created</th>
+            <th style="width:12%">Actions</th>
           </tr>
         </thead>
         <tbody id="progRows"><tr><td class="tiny" colspan="6" style="padding:14px;color:#9fb5d1">No programs loaded.</td></tr></tbody>
@@ -145,7 +176,8 @@
         <div class="row" style="gap:8px;align-items:center">
           <button id="loadInboxBtn" class="btn">Refresh</button>
           <label class="tiny" style="display:flex;gap:6px;align-items:center">
-            <input id="autoInbox" type="checkbox" /> Auto-refresh every 30s
+            <input id="autoInbox" type="checkbox" />
+            Auto-refresh every 30s
           </label>
         </div>
         <div class="tiny">Shows recent uploads, reports, and generated programs.</div>
@@ -153,11 +185,16 @@
       <table>
         <thead>
           <tr>
-            <th style="width:14%">Kind</th><th style="width:34%">Title</th><th style="width:22%">From / Athlete</th>
-            <th style="width:18%">Created</th><th style="width:12%">Actions</th>
+            <th style="width:10%">Kind</th>
+            <th style="width:24%">Title</th>
+            <th style="width:30%">Athlete</th>
+            <th style="width:16%">Created</th>
+            <th style="width:20%">Actions</th>
           </tr>
         </thead>
-        <tbody id="inboxRows"><tr><td class="tiny" colspan="5" style="padding:14px;color:#9fb5d1">No items loaded.</td></tr></tbody>
+        <tbody id="inboxRows">
+          <tr><td class="tiny" colspan="5" style="padding:14px;color:#9fb5d1">No items loaded.</td></tr>
+        </tbody>
       </table>
     </div>
   </div>
@@ -172,9 +209,9 @@
 
     /* ===== Helpers ===== */
     const $ = s => document.querySelector(s);
-    const toast = (m, ok=true)=>{ const t=$("#toast"); t.textContent=m; t.style.display="block"; t.style.borderColor=ok?"#1d5a38":"#8b2a2a"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",3200); };
+    const $$ = s => [...document.querySelectorAll(s)];
+    const toast = (m, ok=true)=>{ const t=$("#toast"); t.textContent=m; t.style.display="block"; t.style.borderColor=ok?"#1d5a38":"#8b2a2a"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",2400); };
     const fn = n => `${SUPABASE_URL}/functions/v1/${n}`;
-
     async function _fetch(name, init){
       init = init || {};
       init.headers = { ...(init.headers||{}), "Content-Type":"application/json", "Authorization":`Bearer ${SUPABASE_ANON}` };
@@ -188,29 +225,21 @@
       const ct = res.headers.get("content-type")||"";
       return ct.includes("application/json") ? res.json() : res.text();
     }
-
-    const sbRest = async (pathWithQuery, init) => {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/${pathWithQuery}`, {
-        ...init,
-        headers: {
-          ...(init && init.headers ? init.headers : {}),
-          apikey: SUPABASE_ANON,
-          Authorization: `Bearer ${SUPABASE_ANON}`,
-          Prefer: "return=representation",
-          "Content-Type": "application/json"
-        }
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(()=> "");
-        throw new Error(`REST ${res.status}: ${body || "Bad Request"}`);
+    const sbRest = (pathWithQuery, init) => fetch(`${SUPABASE_URL}/rest/v1/${pathWithQuery}`, {
+      ...init,
+      headers: {
+        ...(init && init.headers ? init.headers : {}),
+        apikey: SUPABASE_ANON,
+        Authorization: `Bearer ${SUPABASE_ANON}`,
+        Prefer: "return=representation",
+        "Content-Type": "application/json"
       }
-      return res;
-    };
+    });
 
     /* ===== Form wiring ===== */
     const DOWS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
     const payloadBox = $("#payload");
-    const dows = [...document.querySelectorAll("select.dow")];
+    const dows = $$(".dow");
     const intensity = $("#intensity");
     const intensityOut = $("#intensityOut");
 
@@ -237,7 +266,7 @@
       };
     }
     function refreshPreview(){ payloadBox.textContent = JSON.stringify(currentPayload(), null, 2); }
-    document.querySelectorAll("input,select,textarea").forEach(el => el.addEventListener("input", refreshPreview));
+    $$("input,select,textarea").forEach(el => el.addEventListener("input", refreshPreview));
     refreshPreview();
 
     /* ===== Builder actions ===== */
@@ -246,10 +275,14 @@
       catch(e){ toast("Copy failed", false); }
     };
     $("#resetBtn").onclick = ()=> {
-      $("#category").value = "Masters"; $("#gender").value = "Mixed"; $("#boat").value = "";
-      $("#start").value = todayISO; $("#finish").value = plus6.toISOString().slice(0,10);
+      $("#category").value = "Masters";
+      $("#gender").value = "Mixed";
+      $("#boat").value = "";
+      $("#start").value = todayISO;
+      $("#finish").value = plus6.toISOString().slice(0,10);
       $("#intensity").value = 75; intensityOut.textContent = "75";
-      $("#athlete").value = ""; $("#notes").value = "";
+      $("#athlete").value = "";
+      $("#notes").value = "";
       dows.forEach(sel => sel.value = "Rest");
       refreshPreview();
     };
@@ -259,7 +292,7 @@
         if (!p.start_date || !p.finish_date) return toast("Pick start & finish dates", false);
         if (new Date(p.finish_date) <= new Date(p.start_date)) return toast("Finish must be after start", false);
         const res = await _fetch("programs-generate", { method:"POST", body: JSON.stringify(p) });
-        if (res?.ok){ toast("Program created ✔"); await loadPrograms(); }
+        if (res?.ok){ toast("Program created ✔"); await loadPrograms(); await loadInbox(); }
         else { throw new Error(res?.error || "Failed"); }
       }catch(e){ toast(e.message || "Error", false); }
     };
@@ -278,20 +311,37 @@
         }
         for(const it of items){
           const tr = document.createElement("tr");
+
           const tdTitle = document.createElement("td");
           tdTitle.innerHTML = `<div class="ellipsis" title="${(it.title||"program")}">${(it.title||"program")}</div>`;
+
           const tdCat = document.createElement("td"); tdCat.textContent = it.category || "—";
           const tdGen = document.createElement("td"); tdGen.textContent = it.gender || "—";
           const tdInt = document.createElement("td"); tdInt.textContent = (it.intensity_percent ?? "—") + (it.intensity_percent ? "%" : "");
           const tdDate = document.createElement("td"); tdDate.textContent = it.created_at ? new Date(it.created_at).toLocaleString() : "—";
+
           const tdAct = document.createElement("td");
-          const open = document.createElement("a"); open.className="btn small"; open.textContent="Open"; open.target="_blank"; open.rel="noopener"; open.href = it.saved_url || it.public_url || "#";
-          const copy = document.createElement("button"); copy.className="btn small"; copy.textContent="Copy link";
-          copy.onclick = async ()=>{ try{ const link = it.saved_url || it.public_url; if(!link) throw new Error("No link"); await navigator.clipboard.writeText(link); toast("Link copied ✔"); }catch(e){ toast(e.message||"Copy failed",false); } };
-          const del = document.createElement("button"); del.className="btn small danger"; del.textContent="Delete";
-          del.onclick = async ()=> { if (!confirm(`Delete program “${it.title||"program"}”?`)) return;
-            try{ await _fetch("programs-delete", { method:"POST", body: JSON.stringify({ id: it.id, path: it.path, saved_url: it.saved_url }) }); tr.remove(); toast("Deleted"); }
-            catch(e){ toast(e.message||"Delete failed",false); } };
+          const open = document.createElement("a");
+          open.className="btn small"; open.textContent="Open"; open.target="_blank"; open.rel="noopener";
+          open.href = it.saved_url || it.public_url || "#";
+
+          const copy = document.createElement("button");
+          copy.className="btn small"; copy.textContent="Copy link";
+          copy.onclick = async ()=>{ try{
+            const link = it.saved_url || it.public_url; if(!link) throw new Error("No link");
+            await navigator.clipboard.writeText(link); toast("Link copied ✔");
+          }catch(e){ toast(e.message||"Copy failed",false); } };
+
+          const del = document.createElement("button");
+          del.className="btn small danger"; del.textContent="Delete";
+          del.onclick = async ()=> {
+            if (!confirm(`Delete program “${it.title||"program"}”?`)) return;
+            try{
+              await _fetch("programs-delete", { method:"POST", body: JSON.stringify({ id: it.id, path: it.path, saved_url: it.saved_url }) });
+              tr.remove(); toast("Deleted");
+            }catch(e){ toast(e.message||"Delete failed",false); }
+          };
+
           tdAct.append(open, " ", copy, " ", del);
           tr.append(tdTitle, tdCat, tdGen, tdInt, tdDate, tdAct);
           progTbody.appendChild(tr);
@@ -312,16 +362,13 @@
     async function loadInbox() {
       try {
         inboxTbody.innerHTML = `<tr><td class="tiny" colspan="5" style="padding:14px">Loading…</td></tr>`;
-
-        // Safe query string to avoid 400s from PostgREST
-        const p = new URLSearchParams({
-          select: 'id,kind,title,athlete_name,created_at,saved_url,public_url',
-          order: 'created_at.desc',
-          limit: '50'
-        });
-        const res = await sbRest(`coach_inbox_v?${p.toString()}`);
+        // IMPORTANT: only request columns that exist in the view
+        // coach_inbox_v should expose: id, kind, title, created_at, saved_url, public_url,
+        // athlete_name, athlete_email, athlete_user_id
+        const q = `coach_inbox_v?select=id,kind,title,created_at,saved_url,public_url,athlete_name,athlete_email,athlete_user_id&order=created_at.desc&limit=50`;
+        const res = await sbRest(q);
+        if (!res.ok) throw new Error(`Inbox ${res.status}`);
         const items = await res.json();
-
         if (!items.length) {
           inboxTbody.innerHTML = `<tr><td class="tiny" colspan="5" style="padding:14px;color:#9fb5d1">No inbox items.</td></tr>`;
           return;
@@ -329,18 +376,77 @@
         inboxTbody.innerHTML = "";
         for (const it of items) {
           const tr = document.createElement("tr");
-          const tdKind  = document.createElement("td"); tdKind.textContent = (it.kind || "item").toString();
-          const tdTitle = document.createElement("td"); tdTitle.innerHTML = `<div class="ellipsis" title="${it.title || "(untitled)"}">${it.title || "(untitled)"}</div>`;
-          const tdFrom  = document.createElement("td"); tdFrom.innerHTML = (it.athlete_name || "—");
-          const tdDate  = document.createElement("td"); tdDate.textContent = it.created_at ? new Date(it.created_at).toLocaleString() : "—";
 
+          // Kind
+          const tdKind = document.createElement("td");
+          tdKind.textContent = (it.kind || "item").toString();
+
+          // Title
+          const tdTitle = document.createElement("td");
+          tdTitle.innerHTML = `<div class="ellipsis" title="${it.title || "(untitled)"}">${it.title || "(untitled)"}</div>`;
+
+          // Athlete block: name + email + user id (when present)
+          const tdFrom = document.createElement("td");
+          const lines = [];
+          if (it.athlete_name) lines.push(`<div class="ellipsis" title="${it.athlete_name}">${it.athlete_name}</div>`);
+          if (it.athlete_email) lines.push(`<div class="tiny ellipsis" title="${it.athlete_email}">${it.athlete_email}</div>`);
+          if (it.athlete_user_id) lines.push(`<div class="tiny ellipsis" title="${it.athlete_user_id}">${it.athlete_user_id}</div>`);
+          tdFrom.innerHTML = lines.join("") || "—";
+
+          // Created
+          const tdDate = document.createElement("td");
+          tdDate.textContent = it.created_at ? new Date(it.created_at).toLocaleString() : "—";
+
+          // Actions
           const tdAct = document.createElement("td");
           const link = it.saved_url || it.public_url || "";
-          const open = document.createElement("a"); open.className = "btn small"; open.textContent = "Open"; open.target = "_blank"; open.rel = "noopener"; open.href = link || "#";
-          const copy = document.createElement("button"); copy.className = "btn small"; copy.textContent = "Copy";
-          copy.onclick = async () => { try { if (!link) throw new Error("No link"); await navigator.clipboard.writeText(link); toast("Link copied ✔"); } catch (e) { toast(e.message || "Copy failed", false); } };
-          tdAct.append(open, " ", copy);
 
+          const open = document.createElement("a");
+          open.className = "btn small";
+          open.textContent = "Open";
+          open.target = "_blank";
+          open.rel = "noopener";
+          open.href = link || "#";
+
+          const copy = document.createElement("button");
+          copy.className = "btn small";
+          copy.textContent = "Copy";
+          copy.onclick = async () => {
+            try {
+              if (!link) throw new Error("No link");
+              await navigator.clipboard.writeText(link);
+              toast("Link copied ✔");
+            } catch (e) { toast(e.message || "Copy failed", false); }
+          };
+
+          const useAth = document.createElement("button");
+          useAth.className = "btn small";
+          useAth.textContent = "Use athlete";
+          useAth.onclick = () => {
+            if (!it.athlete_user_id) return toast("No athlete id", false);
+            $("#athlete").value = it.athlete_user_id;
+            refreshPreview();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            toast("Athlete attached ✔");
+          };
+
+          const genProg = document.createElement("button");
+          genProg.className = "btn small primary";
+          genProg.textContent = "Generate program";
+          genProg.onclick = async () => {
+            try {
+              if (!it.athlete_user_id) return toast("No athlete id", false);
+              // Use current form, but force athlete id
+              const p = currentPayload();
+              p.athlete_user_id = it.athlete_user_id;
+              if (!p.start_date || !p.finish_date) return toast("Pick dates first", false);
+              const res = await _fetch("programs-generate", { method:"POST", body: JSON.stringify(p) });
+              if (res?.ok){ toast("Program created ✔"); await loadPrograms(); await loadInbox(); }
+              else { throw new Error(res?.error || "Failed"); }
+            } catch (e) { toast(e.message || "Error", false); }
+          };
+
+          tdAct.append(open, " ", copy, " ", useAth, " ", genProg);
           tr.append(tdKind, tdTitle, tdFrom, tdDate, tdAct);
           inboxTbody.appendChild(tr);
         }
@@ -350,13 +456,12 @@
       }
     }
     loadInboxBtn.onclick = loadInbox;
-
     autoInbox.addEventListener("change", () => {
       if (autoInbox.checked) { loadInbox(); inboxTimer = setInterval(loadInbox, 30000); toast("Auto-refresh on"); }
       else { clearInterval(inboxTimer); inboxTimer = null; toast("Auto-refresh off"); }
     });
 
-    // Optional: auto-load on open
+    // Optional convenience: kick off lists on load
     // loadPrograms(); loadInbox();
   </script>
 </body>
