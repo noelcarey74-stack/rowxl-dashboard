@@ -44,9 +44,20 @@
     .empty{ color:#9fb5d1; padding:18px }
 
     .toast{ position:fixed; right:14px; bottom:14px; background:#113057; border:1px solid var(--outline); padding:10px 12px; border-radius:10px; display:none }
+
     .section-title{ margin:24px 0 10px; font-size:20px; color:#dbe8ff }
     #missingFnWarn{ display:none; margin-top:8px; color:#ffc7c7 }
     .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px }
+
+    /* click affordance for expandable cells */
+    .clickable{ cursor:pointer }
+    .clickable:after{ content:""; display:inline-block; width:0; height:0; border-left:4px solid #8eb7ff; border-top:4px solid transparent; border-bottom:4px solid transparent; margin-left:6px; opacity:.8 }
+
+    /* Peek modal */
+    #peek{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:9999 }
+    #peek .card{ width:min(900px,95vw); max-height:90vh; overflow:auto; background:#0f2747; border:1px solid var(--outline); border-radius:12px; padding:14px }
+    #peek h3{ margin:0 0 6px; font-size:16px }
+    #peek pre{ white-space:pre-wrap; word-break:break-word; margin:8px 0 0; background:#113057; border:1px solid var(--outline); border-radius:8px; padding:10px; font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace }
   </style>
 </head>
 <body>
@@ -65,7 +76,7 @@
       </div>
     </div>
 
-    <!-- ===== Program Requests (like Coach Inbox top table) ===== -->
+    <!-- ===== Program Requests ===== -->
     <div class="panel">
       <div class="controls">
         <div class="field">
@@ -105,7 +116,7 @@
       <div id="missingFnWarn" class="tiny"></div>
     </div>
 
-    <!-- ===== Saved Programs (like Saved Reports) ===== -->
+    <!-- ===== Saved Programs ===== -->
     <h2 class="section-title">Saved Programs</h2>
     <div class="panel">
       <div class="controls" style="justify-content:space-between;gap:12px;align-items:flex-end">
@@ -142,19 +153,42 @@
 
   <div id="toast" class="toast"></div>
 
+  <!-- Peek modal -->
+  <div id="peek" role="dialog" aria-modal="true" aria-labelledby="peekTitle">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <h3 id="peekTitle">Details</h3>
+        <button class="btn small" onclick="hidePeek()">Close</button>
+      </div>
+      <pre id="peekBody"></pre>
+    </div>
+  </div>
+
   <script type="module">
     /* ===== CONFIG (testing mode; no login) ===== */
     const SUPABASE_URL  = "https://cketlapkaqmhtmthxozu.supabase.co";
     const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZXRsYXBrYXFtaHRtdGh4b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NjIwMzgsImV4cCI6MjA3NzMzODAzOH0.wfmjPBb-7cNpmlV2JByRHGAwkKjsrK7fHd2D7wlf5oA";
-    const COACH_SECRET  = "abc1234";   // keep same as Coach Inbox while testing
+    const COACH_SECRET  = "abc1234";
 
     /* ===== Helpers ===== */
     const $ = s => document.querySelector(s);
-    const toast = (m, ok=true)=>{ const t=$("#toast"); if(!t) return; t.textContent=m; t.style.display="block"; t.style.borderColor=ok?"#1d5a38":"#8b2a2a"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",2400); };
-    const prettyDate = iso => iso ? new Date(iso).toLocaleString() : "—";
     const coachInput=$("#coachInput");
     coachInput.value = localStorage.getItem("coach_name") || "Noel";
     coachInput.addEventListener("input", ()=> localStorage.setItem("coach_name", coachInput.value.trim()));
+
+    const toast = (m, ok=true)=>{ const t=$("#toast"); if(!t) return; t.textContent=m; t.style.display="block"; t.style.borderColor=ok?"#1d5a38":"#8b2a2a"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",2400); };
+    const prettyDate = iso => iso ? new Date(iso).toLocaleString() : "—";
+
+    // Peek modal
+    function showPeek(title, body){
+      $("#peekTitle").textContent = title || "Details";
+      $("#peekBody").textContent  = body || "";
+      $("#peek").style.display = "flex";
+    }
+    window.hidePeek = () => $("#peek").style.display = "none";
+
+    // utility: copy text
+    async function copy(text){ try{ await navigator.clipboard.writeText(text); toast("Copied ✔"); }catch(e){ toast("Copy failed",false); } }
 
     /* ===== Edge wrappers ===== */
     const fn = n => `${SUPABASE_URL}/functions/v1/${n}`;
@@ -174,7 +208,7 @@
       return ct.includes("application/json") ? res.json() : res.text();
     }
 
-    /* ===== REST helper (avoids CORS preflight by using PostgREST) ===== */
+    // REST helper (PostgREST)
     const sbRest = (pathWithQuery, init={}) => fetch(`${SUPABASE_URL}/rest/v1/${pathWithQuery}`, {
       ...init,
       headers: {
@@ -186,7 +220,7 @@
       }
     });
 
-    // inbox: program requests (REST view)
+    // Requests (view)
     const fetchProgramRequestsREST = async (limit=20) => {
       const q = `program_requests_v?select=id,title,payload,athlete_user_id,athlete_name,athlete_email,created_at,status&order=created_at.desc&limit=${limit}`;
       const res = await sbRest(q);
@@ -194,12 +228,11 @@
       return res.json();
     };
 
-    // -------- FIXED NAMES (singular) ----------
+    // Fixed function names
     const generateProgram = (payload) => _fetch("program-generate", { method:"POST", body: JSON.stringify(payload) });
     const listPrograms    = (limit=200) => _fetch(`program-list?limit=${limit}`, { method:"GET" });
     const shareProgram    = (payload) => _fetch("program-share", { method:"POST", body: JSON.stringify(payload) });
     const deleteProgram   = (payload) => _fetch("program-delete", { method:"POST", body: JSON.stringify(payload) });
-    // ------------------------------------------
 
     /* ===== Render: Program Requests ===== */
     function renderRequests(items){
@@ -213,37 +246,66 @@
         const reqCell = document.createElement("td");
         const title = document.createElement("div");
         title.style.fontWeight="600";
-        title.className = "ellipsis";
+        title.className = "ellipsis clickable";
         title.title = it.title || "program request";
         title.textContent = it.title || "program request";
 
         const prev = document.createElement("div");
-        prev.className = "tiny mono ellipsis";
+        prev.className = "tiny mono ellipsis clickable";
         const p = it.payload || {};
         const snap = {
           category: p.category, gender: p.gender, boat: p.boat_class || null,
           start: p.start_date, finish: p.finish_date,
           intensity: p.intensity_percent, Mon: p.weekly_schedule?.Mon, Tue: p.weekly_schedule?.Tue, Wed: p.weekly_schedule?.Wed
         };
-        prev.textContent = JSON.stringify(snap);
+        const previewText = JSON.stringify(snap);
+        prev.title = previewText;
+        prev.textContent = previewText;
         reqCell.append(title, prev);
+
+        // Clicking the title/preview opens a full JSON peek
+        const fullRequestJSON = JSON.stringify(it.payload ?? {}, null, 2);
+        const openReqPreview = () => showPeek(it.title || "Program request", fullRequestJSON);
+        title.addEventListener("click", openReqPreview);
+        prev.addEventListener("click", openReqPreview);
+        // Double-click copies
+        title.addEventListener("dblclick", () => copy(fullRequestJSON));
+        prev.addEventListener("dblclick", () => copy(fullRequestJSON));
 
         // Athlete identity
         const athleteCell=document.createElement("td");
         const nm=document.createElement("div"); nm.textContent = it.athlete_name || "—";
-        const em=document.createElement("div"); em.className="tiny"; em.textContent = it.athlete_email || "—";
-        const uid=document.createElement("div"); uid.className="tiny"; uid.style.opacity=0.85; uid.textContent = it.athlete_user_id || "—";
+        const em=document.createElement("div"); em.className="tiny ellipsis"; em.textContent = it.athlete_email || "—"; em.title = it.athlete_email || "";
+        const uid=document.createElement("div"); uid.className="tiny ellipsis"; uid.style.opacity=0.85; uid.textContent = it.athlete_user_id || "—"; uid.title = it.athlete_user_id || "";
         athleteCell.append(nm, em, uid);
+        athleteCell.classList.add("clickable");
+        athleteCell.title = "Click to view full identity • Double-click to copy";
+        athleteCell.addEventListener("click", () => {
+          const lines = [
+            `Name:   ${it.athlete_name || "—"}`,
+            `Email:  ${it.athlete_email || "—"}`,
+            `UserID: ${it.athlete_user_id || "—"}`
+          ].join("\n");
+          showPeek("Athlete", lines);
+        });
+        athleteCell.addEventListener("dblclick", () => copy([it.athlete_name,it.athlete_email,it.athlete_user_id].join(" | ")));
 
         // Details
         const detCell=document.createElement("td");
-        const d1=document.createElement("div"); d1.className="tiny";
-        const d2=document.createElement("div"); d2.className="tiny";
-        const d3=document.createElement("div"); d3.className="tiny ellipsis";
-        d1.textContent = `Cat ${p.category||"—"} • Gen ${p.gender||"—"} • Boat ${p.boat_class||"—"}`;
-        d2.textContent = `Dates ${p.start_date||"—"} → ${p.finish_date||"—"} • Int ${p.intensity_percent??"—"}%`;
-        d3.textContent = `Mon ${p.weekly_schedule?.Mon||"—"} • Tue ${p.weekly_schedule?.Tue||"—"} • Wed ${p.weekly_schedule?.Wed||"—"} …`;
+        const d1=document.createElement("div"); d1.className="tiny ellipsis"; d1.textContent = `Cat ${p.category||"—"} • Gen ${p.gender||"—"} • Boat ${p.boat_class||"—"}`; d1.title = d1.textContent;
+        const d2=document.createElement("div"); d2.className="tiny ellipsis"; d2.textContent = `Dates ${p.start_date||"—"} → ${p.finish_date||"—"} • Int ${p.intensity_percent??"—"}%`; d2.title = d2.textContent;
+        const d3=document.createElement("div"); d3.className="tiny ellipsis"; d3.textContent = `Mon ${p.weekly_schedule?.Mon||"—"} • Tue ${p.weekly_schedule?.Tue||"—"} • Wed ${p.weekly_schedule?.Wed||"—"} …`; d3.title = d3.textContent;
         detCell.append(d1,d2,d3);
+        detCell.classList.add("clickable");
+        detCell.title = "Click to view full details • Double-click to copy";
+        detCell.addEventListener("click", () => {
+          const txt = [
+            d1.textContent, d2.textContent,
+            `Weekly: ${JSON.stringify(p.weekly_schedule || {}, null, 2)}`
+          ].join("\n");
+          showPeek("Request details", txt);
+        });
+        detCell.addEventListener("dblclick", () => copy(JSON.stringify(p, null, 2)));
 
         // Created
         const createdCell=document.createElement("td"); createdCell.textContent=prettyDate(it.created_at);
@@ -251,20 +313,7 @@
         // Actions
         const actions = document.createElement("td"); actions.className="row-actions";
         const viewBtn=document.createElement("button"); viewBtn.className="btn small ghost"; viewBtn.textContent="Preview";
-        viewBtn.onclick=()=>{
-          const w = window.open("", "_blank");
-          const safe = (x)=> (x==null?"—":String(x));
-          w.document.write(`
-            <pre style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;white-space:pre-wrap;padding:16px">
-<strong>${safe(it.title)||"Program request"}</strong>
-
-Athlete: ${safe(it.athlete_name)}  |  Email: ${safe(it.athlete_email)}  |  User: ${safe(it.athlete_user_id)}
-Created: ${prettyDate(it.created_at)}
-
-${JSON.stringify(p, null, 2)}
-            </pre>`);
-          w.document.close();
-        };
+        viewBtn.onclick=()=> showPeek(it.title || "Program request", fullRequestJSON);
 
         const genBtn=document.createElement("button"); genBtn.className="btn small primary"; genBtn.textContent="Generate program";
         genBtn.onclick=async()=>{
@@ -314,8 +363,8 @@ ${JSON.stringify(p, null, 2)}
         titleCell.appendChild(titleDiv);
 
         const nm=document.createElement("div"); nm.textContent = it.athlete_name || "—";
-        const em=document.createElement("div"); em.className="tiny"; em.textContent = it.athlete_email || "—";
-        const uid=document.createElement("div"); uid.className="tiny"; uid.style.opacity=0.85; uid.textContent = it.athlete_user_id || "—";
+        const em=document.createElement("div"); em.className="tiny ellipsis"; em.textContent = it.athlete_email || "—"; em.title = it.athlete_email || "";
+        const uid=document.createElement("div"); uid.className="tiny ellipsis"; uid.style.opacity=0.85; uid.textContent = it.athlete_user_id || "—"; uid.title = it.athlete_user_id || "";
         athleteCell.append(nm, em, uid);
 
         statusCell.textContent  = it.status || "done";
@@ -385,7 +434,7 @@ ${JSON.stringify(p, null, 2)}
       }
     }
 
-    /* ===== Minimal PDF (same style as Coach Inbox PDF) ===== */
+    /* ===== Minimal PDF builder ===== */
     async function downloadProgramPDF(row) {
       try {
         const url = row.saved_url || row.public_url;
@@ -471,7 +520,6 @@ ${JSON.stringify(p, null, 2)}
     async function loadPrograms(){
       try{
         $("#progRows").innerHTML=`<tr><td class="empty" colspan="5">Loading…</td></tr>`;
-        // primary: Edge Function
         let data = await listPrograms(200);
         let items = data?.items || [];
 
