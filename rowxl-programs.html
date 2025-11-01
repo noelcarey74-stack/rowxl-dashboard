@@ -400,3 +400,122 @@
   <div id="toast" class="toast"></div>
 </body>
 </html>
+<script type="module">
+  // ... keep all your existing script above ...
+
+  // ========= Inbox (coach_inbox_v) =========
+  const inboxTbody = document.getElementById("inboxRows");
+  const autoInbox = document.getElementById("autoInbox");
+  const loadInboxBtn = document.getElementById("loadInboxBtn");
+  let inboxTimer = null;
+
+  function sbRest(pathWithQuery, init) {
+    return fetch(`${SUPABASE_URL}/rest/v1/${pathWithQuery}`, {
+      ...init,
+      headers: {
+        ...(init && init.headers ? init.headers : {}),
+        apikey: SUPABASE_ANON,
+        Authorization: `Bearer ${SUPABASE_ANON}`,
+        Prefer: "return=representation",
+        "Content-Type": "application/json"
+      }
+    });
+  }
+
+  async function loadInbox() {
+    try {
+      inboxTbody.innerHTML = `<tr><td class="tiny" colspan="5" style="padding:14px">Loading…</td></tr>`;
+
+      // Pull most recent 50 items from your unified inbox view
+      // Adjust the selected columns to match your coach_inbox_v view
+      const q =
+        `coach_inbox_v` +
+        `?select=id,kind,title,athlete_name,from_user,created_at,public_url,saved_url` +
+        `&order=created_at.desc&limit=50`;
+
+      const res = await sbRest(q);
+      if (!res.ok) throw new Error(`Inbox ${res.status}`);
+      const items = await res.json();
+
+      if (!items.length) {
+        inboxTbody.innerHTML =
+          `<tr><td class="tiny" colspan="5" style="padding:14px;color:#9fb5d1">No inbox items.</td></tr>`;
+        return;
+      }
+
+      inboxTbody.innerHTML = "";
+      for (const it of items) {
+        const tr = document.createElement("tr");
+
+        // Kind
+        const tdKind = document.createElement("td");
+        tdKind.textContent = (it.kind || "item").toString();
+
+        // Title
+        const tdTitle = document.createElement("td");
+        tdTitle.innerHTML =
+          `<div class="ellipsis" title="${it.title || "(untitled)"}">${it.title || "(untitled)"}</div>`;
+
+        // From / Athlete
+        const tdFrom = document.createElement("td");
+        tdFrom.innerHTML = (it.athlete_name || it.from_user || "—");
+
+        // Created
+        const tdDate = document.createElement("td");
+        tdDate.textContent = it.created_at
+          ? new Date(it.created_at).toLocaleString()
+          : "—";
+
+        // Actions
+        const link = it.saved_url || it.public_url;
+        const tdAct = document.createElement("td");
+
+        const open = document.createElement("a");
+        open.className = "btn small";
+        open.textContent = "Open";
+        open.target = "_blank";
+        open.rel = "noopener";
+        open.href = link || "#";
+
+        const copy = document.createElement("button");
+        copy.className = "btn small";
+        copy.textContent = "Copy";
+        copy.onclick = async () => {
+          try {
+            if (!link) throw new Error("No link");
+            await navigator.clipboard.writeText(link);
+            toast("Link copied ✔");
+          } catch (e) {
+            toast(e.message || "Copy failed", false);
+          }
+        };
+
+        tdAct.append(open, " ", copy);
+        tr.append(tdKind, tdTitle, tdFrom, tdDate, tdAct);
+        inboxTbody.appendChild(tr);
+      }
+    } catch (e) {
+      inboxTbody.innerHTML =
+        `<tr><td class="tiny" colspan="5" style="padding:14px;color:#ffc7c7">Error loading inbox.</td></tr>`;
+      toast(e.message || "Inbox failed", false);
+    }
+  }
+
+  loadInboxBtn.onclick = loadInbox;
+
+  autoInbox.addEventListener("change", () => {
+    if (autoInbox.checked) {
+      // Kick off immediately, then every 30s
+      loadInbox();
+      inboxTimer = setInterval(loadInbox, 30000);
+      toast("Auto-refresh on");
+    } else {
+      clearInterval(inboxTimer);
+      inboxTimer = null;
+      toast("Auto-refresh off");
+    }
+  });
+
+  // OPTIONAL: initial inbox load on page open
+  loadInbox();
+</script>
