@@ -194,11 +194,12 @@
       return res.json();
     };
 
-    // actions still via functions
-    const generateProgram = (payload) => _fetch("programs-generate", { method:"POST", body: JSON.stringify(payload) });
-    const listPrograms    = (limit=200) => _fetch(`programs-list?limit=${limit}`, { method:"GET" });
-    const shareProgram    = (payload) => _fetch("programs-share", { method:"POST", body: JSON.stringify(payload) });
-    const deleteProgram   = (payload) => _fetch("programs-delete", { method:"POST", body: JSON.stringify(payload) });
+    // -------- FIXED NAMES (singular) ----------
+    const generateProgram = (payload) => _fetch("program-generate", { method:"POST", body: JSON.stringify(payload) });
+    const listPrograms    = (limit=200) => _fetch(`program-list?limit=${limit}`, { method:"GET" });
+    const shareProgram    = (payload) => _fetch("program-share", { method:"POST", body: JSON.stringify(payload) });
+    const deleteProgram   = (payload) => _fetch("program-delete", { method:"POST", body: JSON.stringify(payload) });
+    // ------------------------------------------
 
     /* ===== Render: Program Requests ===== */
     function renderRequests(items){
@@ -470,8 +471,16 @@ ${JSON.stringify(p, null, 2)}
     async function loadPrograms(){
       try{
         $("#progRows").innerHTML=`<tr><td class="empty" colspan="5">Loading…</td></tr>`;
-        const data=await listPrograms(200);
-        renderPrograms(data?.items||[]);
+        // primary: Edge Function
+        let data = await listPrograms(200);
+        let items = data?.items || [];
+
+        // fallback: REST if function not available
+        if (!items.length) {
+          const res = await sbRest('program_files?select=*&order=created_at.desc&limit=200');
+          if (res.ok) items = await res.json();
+        }
+        renderPrograms(items||[]);
       }catch(e){
         $("#progRows").innerHTML=`<tr><td class="empty" colspan="5">Error loading programs.</td></tr>`;
         toast(e.message||"Failed to load programs",false);
