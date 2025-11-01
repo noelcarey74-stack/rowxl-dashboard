@@ -41,7 +41,7 @@
     .pill{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--outline); color:#b8d2ff }
     .pill.done{ background:#113e22; border-color:#1d5a38; color:#bff3d3 }
     .ellipsis{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-    .empty{ color:var(--muted); padding:18px }
+    .empty{ color:#9fb5d1; padding:18px }
 
     .toast{ position:fixed; right:14px; bottom:14px; background:#113057; border:1px solid var(--outline); padding:10px 12px; border-radius:10px; display:none }
     .section-title{ margin:24px 0 10px; font-size:20px; color:#dbe8ff }
@@ -174,20 +174,38 @@
       return ct.includes("application/json") ? res.json() : res.text();
     }
 
-    // inbox: program requests created by athletes (or app) for coaches to action
-    const fetchProgramRequests = (limit=20)=> _fetch("programs-inbox", { method:"POST", body: JSON.stringify({ limit }) });
-    const generateProgram      = (payload) => _fetch("programs-generate", { method:"POST", body: JSON.stringify(payload) });
-    const listPrograms         = (limit=200) => _fetch(`programs-list?limit=${limit}`, { method:"GET" });
-    const shareProgram         = (payload) => _fetch("programs-share", { method:"POST", body: JSON.stringify(payload) });
-    const deleteProgram        = (payload) => _fetch("programs-delete", { method:"POST", body: JSON.stringify(payload) });
+    /* ===== REST helper (avoids CORS preflight by using PostgREST) ===== */
+    const sbRest = (pathWithQuery, init={}) => fetch(`${SUPABASE_URL}/rest/v1/${pathWithQuery}`, {
+      ...init,
+      headers: {
+        ...(init.headers||{}),
+        apikey: SUPABASE_ANON,
+        Authorization: `Bearer ${SUPABASE_ANON}`,
+        Prefer: "return=representation",
+        "Content-Type": "application/json"
+      }
+    });
 
-    /* ===== Render: Program Requests (top table) ===== */
+    // inbox: program requests (REST view)
+    const fetchProgramRequestsREST = async (limit=20) => {
+      const q = `program_requests_v?select=id,title,payload,athlete_user_id,athlete_name,athlete_email,created_at,status&order=created_at.desc&limit=${limit}`;
+      const res = await sbRest(q);
+      if(!res.ok) throw new Error(`program_requests_v ${res.status}`);
+      return res.json();
+    };
+
+    // actions still via functions
+    const generateProgram = (payload) => _fetch("programs-generate", { method:"POST", body: JSON.stringify(payload) });
+    const listPrograms    = (limit=200) => _fetch(`programs-list?limit=${limit}`, { method:"GET" });
+    const shareProgram    = (payload) => _fetch("programs-share", { method:"POST", body: JSON.stringify(payload) });
+    const deleteProgram   = (payload) => _fetch("programs-delete", { method:"POST", body: JSON.stringify(payload) });
+
+    /* ===== Render: Program Requests ===== */
     function renderRequests(items){
       const tbody = $("#reqRows"); tbody.innerHTML = "";
       if (!items?.length){ tbody.innerHTML = `<tr><td class="empty" colspan="5">No requests yet.</td></tr>`; return; }
 
       for(const it of items){
-        // expected fields (defensive): title, payload (object), athlete_* , created_at, id/path
         const tr = document.createElement("tr");
 
         // Request cell — title + compact preview
@@ -197,9 +215,10 @@
         title.className = "ellipsis";
         title.title = it.title || "program request";
         title.textContent = it.title || "program request";
+
         const prev = document.createElement("div");
         prev.className = "tiny mono ellipsis";
-        const p = it.payload || it.request || {};
+        const p = it.payload || {};
         const snap = {
           category: p.category, gender: p.gender, boat: p.boat_class || null,
           start: p.start_date, finish: p.finish_date,
@@ -212,10 +231,10 @@
         const athleteCell=document.createElement("td");
         const nm=document.createElement("div"); nm.textContent = it.athlete_name || "—";
         const em=document.createElement("div"); em.className="tiny"; em.textContent = it.athlete_email || "—";
-        const uid=document.createElement("div"); uid.className="tiny"; uid.style.opacity=0.85; uid.textContent = it.athlete_user_id || it.user_id || "—";
+        const uid=document.createElement("div"); uid.className="tiny"; uid.style.opacity=0.85; uid.textContent = it.athlete_user_id || "—";
         athleteCell.append(nm, em, uid);
 
-        // Details (nice compact lines)
+        // Details
         const detCell=document.createElement("td");
         const d1=document.createElement("div"); d1.className="tiny";
         const d2=document.createElement("div"); d2.className="tiny";
@@ -238,7 +257,7 @@
             <pre style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;white-space:pre-wrap;padding:16px">
 <strong>${safe(it.title)||"Program request"}</strong>
 
-Athlete: ${safe(it.athlete_name)}  |  Email: ${safe(it.athlete_email)}  |  User: ${safe(it.athlete_user_id||it.user_id)}
+Athlete: ${safe(it.athlete_name)}  |  Email: ${safe(it.athlete_email)}  |  User: ${safe(it.athlete_user_id)}
 Created: ${prettyDate(it.created_at)}
 
 ${JSON.stringify(p, null, 2)}
@@ -252,20 +271,19 @@ ${JSON.stringify(p, null, 2)}
           if(!coach) return toast("Enter coach name",false);
           genBtn.disabled=true; genBtn.textContent="Generating…";
           try{
-            const body = { ...(p||{}), coach_name: coach, athlete_user_id: (it.athlete_user_id || it.user_id || null) };
+            const body = { ...(p||{}), coach_name: coach, athlete_user_id: (it.athlete_user_id || null) };
             const r = await generateProgram(body);
             if (r?.ok){ toast("Program saved ✔"); genBtn.textContent="Generated"; genBtn.disabled=false; }
             else throw new Error(r?.error||"Failed");
           }catch(e){ toast(e.message||"Error",false); genBtn.textContent="Generate program"; genBtn.disabled=false; }
         };
 
-        // deleting a request (optional; no-op if function not present)
         const delBtn=document.createElement("button"); delBtn.className="btn small danger"; delBtn.textContent="Delete";
         delBtn.onclick=async()=>{
           if(!confirm("Delete this request?")) return;
           delBtn.disabled=true; delBtn.textContent="Deleting…";
           try{
-            await _fetch("programs-delete-request", { method:"POST", body: JSON.stringify({ id: it.id, path: it.path||null }) });
+            await _fetch("programs-delete-request", { method:"POST", body: JSON.stringify({ id: it.id }) });
             tr.remove(); toast("Request deleted");
           }catch(e){ toast(e.message||"Delete failed",false); delBtn.textContent="Delete"; delBtn.disabled=false; }
         };
@@ -276,7 +294,7 @@ ${JSON.stringify(p, null, 2)}
       }
     }
 
-    /* ===== Render: Saved Programs (bottom table; mirrors Saved Reports) ===== */
+    /* ===== Render: Saved Programs ===== */
     function renderPrograms(items){
       const tbody=$("#progRows"); tbody.innerHTML="";
       if(!items?.length){ tbody.innerHTML=`<tr><td class="empty" colspan="5">No programs found.</td></tr>`; return; }
@@ -442,8 +460,8 @@ ${JSON.stringify(p, null, 2)}
       try{
         $("#reqRows").innerHTML=`<tr><td class="empty" colspan="5">Loading…</td></tr>`;
         const limit=Number($("#limitSelect").value||20);
-        const data=await fetchProgramRequests(limit);
-        renderRequests(data?.items||[]);
+        const items = await fetchProgramRequestsREST(limit);
+        renderRequests(items||[]);
       }catch(e){
         $("#reqRows").innerHTML=`<tr><td class="empty" colspan="5">Error loading requests.</td></tr>`;
         toast(e.message||"Failed to load requests",false);
