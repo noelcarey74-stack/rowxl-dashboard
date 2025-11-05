@@ -47,19 +47,17 @@
 
     .section-title{ margin:24px 0 10px; font-size:20px; color:#dbe8ff }
     #missingFnWarn{ display:none; margin-top:8px; color:#ffc7c7 }
+    #missingSignWarn{ display:none; margin-top:8px; color:#ffc7c7 }
     .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px }
 
-    /* click affordance for expandable cells */
     .clickable{ cursor:pointer }
     .clickable:after{ content:""; display:inline-block; width:0; height:0; border-left:4px solid #8eb7ff; border-top:4px solid transparent; border-bottom:4px solid transparent; margin-left:6px; opacity:.8 }
 
-    /* Peek modal */
     #peek{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:9999 }
     #peek .card{ width:min(900px,95vw); max-height:90vh; overflow:auto; background:#0f2747; border:1px solid var(--outline); border-radius:12px; padding:14px }
     #peek h3{ margin:0 0 6px; font-size:16px }
     #peek pre{ white-space:pre-wrap; word-break:break-word; margin:8px 0 0; background:#113057; border:1px solid var(--outline); border-radius:8px; padding:10px; font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace }
 
-    /* Compose modal (manual entry) */
     #compose{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:9999 }
     #compose .card{ width:min(900px,95vw); max-height:90vh; overflow:auto; background:#0f2747; border:1px solid var(--outline); border-radius:12px; padding:14px }
     #compose h3{ margin:0 0 6px; font-size:16px }
@@ -68,7 +66,6 @@
 </head>
 <body>
 
-  <!-- quick links (top-right) -->
   <div style="position:fixed; top:10px; right:10px; font-size:12px; opacity:.9; display:flex; gap:10px; z-index:10">
     <a href="index.html" style="color:#cfe2ff; padding:6px 10px; border:1px solid #1e3a5f; border-radius:999px; background:#113057; text-decoration:none">Coach Inbox</a>
     <a href="rowxl-athlete.html" style="color:#cfe2ff; padding:6px 10px; border:1px solid #1e3a5f; border-radius:999px; background:#113057; text-decoration:none">Athlete view</a>
@@ -154,6 +151,7 @@
           <tr><td class="empty" colspan="5">No programs loaded.</td></tr>
         </tbody>
       </table>
+      <div id="missingSignWarn" class="tiny"></div>
     </div>
   </div>
 
@@ -193,6 +191,7 @@
     const SUPABASE_URL  = "https://cketlapkaqmhtmthxozu.supabase.co";
     const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZXRsYXBrYXFtaHRtdGh4b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NjIwMzgsImV4cCI6MjA3NzMzODAzOH0.wfmjPBb-7cNpmlV2JByRHGAwkKjsrK7fHd2D7wlf5oA";
     const COACH_SECRET  = "abc1234";
+    const PROGRAM_BUCKET = "programs";          // storage bucket name
 
     /* ===== Helpers ===== */
     const $ = s => document.querySelector(s);
@@ -204,14 +203,12 @@
     const prettyDate = iso => iso ? new Date(iso).toLocaleString() : "—";
 
     // Peek modal
-    function showPeek(title, body){
-      $("#peekTitle").textContent = title || "Details";
-      $("#peekBody").textContent  = body || "";
-      $("#peek").style.display = "flex";
-    }
+    function showPeek(title, body){ $("#peekTitle").textContent = title || "Details"; $("#peekBody").textContent  = body || ""; $("#peek").style.display = "flex"; }
     window.hidePeek = () => $("#peek").style.display = "none";
+    function hideCompose(){ $("#compose").style.display = "none"; _composeCtx = null; }
+    window.hideCompose = hideCompose;
 
-    // utility: copy text
+    // Copy helper
     async function copy(text){ try{ await navigator.clipboard.writeText(text); toast("Copied ✔"); }catch(e){ toast("Copy failed",false); } }
 
     /* ===== Edge wrappers ===== */
@@ -232,6 +229,21 @@
       return ct.includes("application/json") ? res.json() : res.text();
     }
 
+    // Signer (for private bucket) — separate warning block
+    async function signPath(path, expires=300){
+      try{
+        const res = await _fetch("program-sign", { method:"POST", body: JSON.stringify({ bucket: PROGRAM_BUCKET, path, expires }) });
+        if (!res?.url) throw new Error("sign failed");
+        return res.url;
+      }catch(e){
+        const w=$("#missingSignWarn"); if(w && /program-sign 404/.test(String(e))) {
+          w.style.display="block";
+          w.textContent = `Missing Edge Function “program-sign”. Deploy with: supabase functions deploy program-sign`;
+        }
+        throw e;
+      }
+    }
+
     // REST helper (PostgREST)
     const sbRest = (pathWithQuery, init={}) => fetch(`${SUPABASE_URL}/rest/v1/${pathWithQuery}`, {
       ...init,
@@ -244,7 +256,7 @@
       }
     });
 
-    // Requests (view)
+    // Requests view
     const fetchProgramRequestsREST = async (limit=20) => {
       const q = `program_requests_v?select=id,title,payload,athlete_user_id,athlete_name,athlete_email,created_at,status&order=created_at.desc&limit=${limit}`;
       const res = await sbRest(q);
@@ -252,16 +264,16 @@
       return res.json();
     };
 
-    // Fixed function names
+    // Functions (must exist)
     const generateProgram = (payload) => _fetch("program-generate", { method:"POST", body: JSON.stringify(payload) });
-    const listPrograms    = (limit=200) => _fetch(`program-list?limit=${limit}`, { method:"GET" });
-    const shareProgram    = (payload) => _fetch("program-share", { method:"POST", body: JSON.stringify(payload) });
-    const deleteProgram   = (payload) => _fetch("program-delete", { method:"POST", body: JSON.stringify(payload) });
+    const listPrograms    = (limit=200)      => _fetch(`program-list?limit=${limit}`, { method:"GET" });
+    const shareProgram    = (payload)        => _fetch("program-share", { method:"POST", body: JSON.stringify(payload) });
+    const deleteProgram   = (payload)        => _fetch("program-delete", { method:"POST", body: JSON.stringify(payload) });
 
-    /* ===== Compose editor (manual — no AI) ===== */
+    /* ===== Compose editor ===== */
     let _composeCtx = null;
     function showCompose(ctx){
-      _composeCtx = ctx; // {title, athlete_user_id, coach_name, athlete_name}
+      _composeCtx = ctx;
       $("#composeTitle").textContent = `Compose — ${ctx.title || "Program"}`;
       $("#composeText").value = [
         `# ${ctx.title || "RowXL — Training Program"}`,
@@ -283,8 +295,6 @@
       ].join("\n");
       $("#compose").style.display = "flex";
     }
-    function hideCompose(){ $("#compose").style.display = "none"; _composeCtx = null; }
-    window.hideCompose = hideCompose;
 
     async function saveComposedProgram(){
       const btn = $("#composeSaveBtn");
@@ -315,7 +325,7 @@
       for(const it of items){
         const tr = document.createElement("tr");
 
-        // Request cell — title + compact preview
+        // request cell
         const reqCell = document.createElement("td");
         const title = document.createElement("div");
         title.style.fontWeight="600";
@@ -336,16 +346,14 @@
         prev.textContent = previewText;
         reqCell.append(title, prev);
 
-        // Clicking the title/preview opens a full JSON peek
         const fullRequestJSON = JSON.stringify(it.payload ?? {}, null, 2);
         const openReqPreview = () => showPeek(it.title || "Program request", fullRequestJSON);
         title.addEventListener("click", openReqPreview);
         prev.addEventListener("click", openReqPreview);
-        // Double-click copies
         title.addEventListener("dblclick", () => copy(fullRequestJSON));
         prev.addEventListener("dblclick", () => copy(fullRequestJSON));
 
-        // Athlete identity
+        // athlete identity
         const athleteCell=document.createElement("td");
         const nm=document.createElement("div"); nm.textContent = it.athlete_name || "—";
         const em=document.createElement("div"); em.className="tiny ellipsis"; em.textContent = it.athlete_email || "—"; em.title = it.athlete_email || "";
@@ -363,7 +371,7 @@
         });
         athleteCell.addEventListener("dblclick", () => copy([it.athlete_name,it.athlete_email,it.athlete_user_id].join(" | ")));
 
-        // Details
+        // details
         const detCell=document.createElement("td");
         const d1=document.createElement("div"); d1.className="tiny ellipsis"; d1.textContent = `Cat ${p.category||"—"} • Gen ${p.gender||"—"} • Boat ${p.boat_class||"—"}`; d1.title = d1.textContent;
         const d2=document.createElement("div"); d2.className="tiny ellipsis"; d2.textContent = `Dates ${p.start_date||"—"} → ${p.finish_date||"—"} • Int ${p.intensity_percent??"—"}%`; d2.title = d2.textContent;
@@ -372,23 +380,19 @@
         detCell.classList.add("clickable");
         detCell.title = "Click to view full details • Double-click to copy";
         detCell.addEventListener("click", () => {
-          const txt = [
-            d1.textContent, d2.textContent,
-            `Weekly: ${JSON.stringify(p.weekly_schedule || {}, null, 2)}`
-          ].join("\n");
+          const txt = [ d1.textContent, d2.textContent, `Weekly: ${JSON.stringify(p.weekly_schedule || {}, null, 2)}` ].join("\n");
           showPeek("Request details", txt);
         });
         detCell.addEventListener("dblclick", () => copy(JSON.stringify(p, null, 2)));
 
-        // Created
+        // created
         const createdCell=document.createElement("td"); createdCell.textContent=prettyDate(it.created_at);
 
-        // Actions
+        // actions
         const actions = document.createElement("td"); actions.className="row-actions";
         const viewBtn=document.createElement("button"); viewBtn.className="btn small ghost"; viewBtn.textContent="Preview";
         viewBtn.onclick=()=> showPeek(it.title || "Program request", fullRequestJSON);
 
-        // Open editor (manual program entry)
         const genBtn=document.createElement("button");
         genBtn.className="btn small primary";
         genBtn.textContent="Generate program";
@@ -419,7 +423,24 @@
       }
     }
 
-    /* ===== Render: Saved Programs ===== */
+    /* ===== Saved Programs ===== */
+
+    function displayNameFromRow(it){
+      return (it.title||it.path||it.saved_url||"program").split("/").slice(-1)[0];
+    }
+
+    async function getProgramURL(it){
+      // Public-first
+      if (it.public_url) return it.public_url;
+      if (it.saved_url)  return it.saved_url;
+
+      // Private bucket path
+      if (it.path){
+        return await signPath(it.path, 300); // 5 minutes
+      }
+      throw new Error("No path/url on this row.");
+    }
+
     function renderPrograms(items){
       const tbody=$("#progRows"); tbody.innerHTML="";
       if(!items?.length){ tbody.innerHTML=`<tr><td class="empty" colspan="5">No programs found.</td></tr>`; return; }
@@ -433,7 +454,7 @@
         const createdCell=document.createElement("td");
         const actionsCell=document.createElement("td"); actionsCell.className="row-actions";
 
-        const displayTitle=(it.title||it.path||it.saved_url||"program").split("/").slice(-1)[0];
+        const displayTitle=displayNameFromRow(it);
         const titleDiv=document.createElement("div"); titleDiv.className="ellipsis"; titleDiv.title=displayTitle; titleDiv.textContent=displayTitle;
         titleCell.appendChild(titleDiv);
 
@@ -448,19 +469,34 @@
         const openBtn=document.createElement("a");
         openBtn.className="btn small";
         openBtn.textContent="Open";
-        openBtn.target="_blank";
-        openBtn.rel="noopener";
-        openBtn.href=it.saved_url || it.public_url || "#";
+        openBtn.target="_blank"; openBtn.rel="noopener";
+
+        // set href lazily when clicked (so signed URL is fresh)
+        openBtn.addEventListener("click", async (ev)=>{
+          try{
+            openBtn.textContent="Open…";
+            const url = await getProgramURL(it);
+            openBtn.href = url;
+            // let the default link open now
+          }catch(e){
+            ev.preventDefault();
+            toast(e.message||"Open failed", false);
+            openBtn.textContent="Open";
+          }
+        }, { once:true });
 
         const copyBtn=document.createElement("button");
         copyBtn.className="btn small";
         copyBtn.textContent="Copy link";
-        copyBtn.onclick=async()=>{ try{
-          const link=it.saved_url||it.public_url;
-          if(!link) throw new Error("No link");
-          await navigator.clipboard.writeText(link);
-          toast("Link copied ✔");
-        }catch(e){ toast(e.message||"Copy failed",false); } };
+        copyBtn.onclick=async()=>{
+          try{
+            copyBtn.textContent="Copying…";
+            const url=await getProgramURL(it);
+            await navigator.clipboard.writeText(url);
+            toast("Link copied ✔");
+          }catch(e){ toast(e.message||"Copy failed",false); }
+          finally{ copyBtn.textContent="Copy link"; }
+        };
 
         const pdfBtn=document.createElement("button");
         pdfBtn.className="btn small";
@@ -474,18 +510,19 @@
           const def=($("#defaultAthlete").value||"").trim();
           const athleteId=it.athlete_user_id || def;
           if(!athleteId) return toast("Enter athlete UUID (row or default)",false);
-          const url=it.saved_url||it.public_url;
-          if (!url) return toast("No URL on this program.", false);
 
           try{
             shareBtn.disabled=true; shareBtn.textContent="Sharing…";
-            const r=await shareProgram({
+            const url = await getProgramURL(it); // share a working link (public or signed)
+            const payload = {
               athlete_user_id: athleteId,
               title: displayTitle,
               url,
               program_id: it.id || null,
-              coach_name: (coachInput.value||null)
-            });
+              coach_name: (coachInput.value||null),
+              path: it.path || null // <-- so the app can use private download
+            };
+            const r=await shareProgram(payload);
             if (r?.ok) toast("Shared ✔");
             else throw new Error(r?.error||"Share failed");
           }catch(e){ toast(e.message||"Share failed",false); }
@@ -509,11 +546,10 @@
       }
     }
 
-    /* ===== Minimal PDF builder ===== */
+    /* ===== Minimal PDF builder (client-side) ===== */
     async function downloadProgramPDF(row) {
       try {
-        const url = row.saved_url || row.public_url;
-        if (!url) throw new Error("No saved URL on program.");
+        const url = await getProgramURL(row);
         const md = await (await fetch(url)).text();
 
         const safe = md
@@ -531,7 +567,7 @@
         const athleteEmail = row.athlete_email || "—";
         const created= row.created_at ? new Date(row.created_at) : null;
         const createdPretty = created ? created.toLocaleString(undefined,{hour12:false}) : "—";
-        const title = row.title || row.path || "RowXL — Training Program";
+        const title = displayNameFromRow(row);
 
         const html = `<!doctype html>
 <html>
@@ -592,13 +628,16 @@
         toast(e.message||"Failed to load requests",false);
       }
     }
+
     async function loadPrograms(){
       try{
         $("#progRows").innerHTML=`<tr><td class="empty" colspan="5">Loading…</td></tr>`;
+
+        // Prefer the Edge function (can include path + metadata).
         let data = await listPrograms(200);
         let items = data?.items || [];
 
-        // fallback: REST if function not available
+        // Fallback: REST view/table if function not present.
         if (!items.length) {
           const res = await sbRest('program_files?select=*&order=created_at.desc&limit=200');
           if (res.ok) items = await res.json();
