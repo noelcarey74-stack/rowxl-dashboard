@@ -317,7 +317,7 @@
     }
     $("#composeSaveBtn")?.addEventListener("click", saveComposedProgram);
 
-    /* ===== Requests renderer (added back) ===== */
+    /* ===== Program Requests renderer (FIX ADDED) ===== */
     function renderRequests(items){
       const tbody = $("#reqRows"); tbody.innerHTML = "";
       if (!items?.length){
@@ -328,11 +328,11 @@
       for(const it of items){
         const tr = document.createElement("tr");
 
-        // Request cell (title + tiny JSON preview)
+        // request cell
         const reqCell = document.createElement("td");
         const title = document.createElement("div");
         title.style.fontWeight="600";
-        title.className="ellipsis clickable";
+        title.className = "ellipsis clickable";
         title.title = it.title || "program request";
         title.textContent = it.title || "program request";
 
@@ -353,30 +353,74 @@
         const openReqPreview = () => showPeek(it.title || "Program request", fullRequestJSON);
         title.addEventListener("click", openReqPreview);
         prev.addEventListener("click", openReqPreview);
+        title.addEventListener("dblclick", () => copy(fullRequestJSON));
+        prev.addEventListener("dblclick", () => copy(fullRequestJSON));
 
-        // Athlete identity
+        // athlete identity
         const athleteCell=document.createElement("td");
         const nm=document.createElement("div"); nm.textContent = it.athlete_name || "—";
         const em=document.createElement("div"); em.className="tiny ellipsis"; em.textContent = it.athlete_email || "—"; em.title = it.athlete_email || "";
         const uid=document.createElement("div"); uid.className="tiny ellipsis"; uid.style.opacity=0.85; uid.textContent = it.athlete_user_id || "—"; uid.title = it.athlete_user_id || "";
         athleteCell.append(nm, em, uid);
+        athleteCell.classList.add("clickable");
+        athleteCell.title = "Click to view full identity • Double-click to copy";
+        athleteCell.addEventListener("click", () => {
+          const lines = [
+            `Name:   ${it.athlete_name || "—"}`,
+            `Email:  ${it.athlete_email || "—"}`,
+            `UserID: ${it.athlete_user_id || "—"}`
+          ].join("\n");
+          showPeek("Athlete", lines);
+        });
+        athleteCell.addEventListener("dblclick", () => copy([it.athlete_name,it.athlete_email,it.athlete_user_id].join(" | ")));
 
-        // Details (short)
+        // details
         const detCell=document.createElement("td");
         const d1=document.createElement("div"); d1.className="tiny ellipsis"; d1.textContent = `Cat ${p.category||"—"} • Gen ${p.gender||"—"} • Boat ${p.boat_class||"—"}`; d1.title = d1.textContent;
         const d2=document.createElement("div"); d2.className="tiny ellipsis"; d2.textContent = `Dates ${p.start_date||"—"} → ${p.finish_date||"—"} • Int ${p.intensity_percent??"—"}%`; d2.title = d2.textContent;
         const d3=document.createElement("div"); d3.className="tiny ellipsis"; d3.textContent = `Mon ${p.weekly_schedule?.Mon||"—"} • Tue ${p.weekly_schedule?.Tue||"—"} • Wed ${p.weekly_schedule?.Wed||"—"} …`; d3.title = d3.textContent;
         detCell.append(d1,d2,d3);
+        detCell.classList.add("clickable");
+        detCell.title = "Click to view full details • Double-click to copy";
+        detCell.addEventListener("click", () => {
+          const txt = [ d1.textContent, d2.textContent, `Weekly: ${JSON.stringify(p.weekly_schedule || {}, null, 2)}` ].join("\n");
+          showPeek("Request details", txt);
+        });
+        detCell.addEventListener("dblclick", () => copy(JSON.stringify(p, null, 2)));
 
-        // Created
+        // created
         const createdCell=document.createElement("td"); createdCell.textContent=prettyDate(it.created_at);
 
-        // Actions
+        // actions
         const actions = document.createElement("td"); actions.className="row-actions";
         const viewBtn=document.createElement("button"); viewBtn.className="btn small ghost"; viewBtn.textContent="Preview";
         viewBtn.onclick=()=> showPeek(it.title || "Program request", fullRequestJSON);
-        actions.append(viewBtn);
 
+        const genBtn=document.createElement("button");
+        genBtn.className="btn small primary";
+        genBtn.textContent="Generate program";
+        genBtn.title = "Open editor to paste/type the program";
+        genBtn.onclick = () => {
+          const coach = (coachInput.value || "").trim();
+          showCompose({
+            title: it.title || "Program",
+            coach_name: coach || null,
+            athlete_user_id: it.athlete_user_id || null,
+            athlete_name: it.athlete_name || "—"
+          });
+        };
+
+        const delBtn=document.createElement("button"); delBtn.className="btn small danger"; delBtn.textContent="Delete";
+        delBtn.onclick=async()=>{
+          if(!confirm("Delete this request?")) return;
+          delBtn.disabled=true; delBtn.textContent="Deleting…";
+          try{
+            await _fetch("programs-delete-request", { method:"POST", body: JSON.stringify({ id: it.id }) });
+            tr.remove(); toast("Request deleted");
+          }catch(e){ toast(e.message||"Delete failed",false); delBtn.textContent="Delete"; delBtn.disabled=false; }
+        };
+
+        actions.append(viewBtn, genBtn, delBtn);
         tr.append(reqCell, athleteCell, detCell, createdCell, actions);
         tbody.appendChild(tr);
       }
@@ -388,9 +432,6 @@
     function derivePathFromUrl(url){
       if (!url) return null;
       try{
-        // Examples we strip:
-        // /storage/v1/object/public/programs/<path>
-        // /storage/v1/object/sign/programs/<path>?token=...
         const u = new URL(url);
         const ix = u.pathname.indexOf("/programs/");
         if (ix >= 0) {
@@ -402,9 +443,7 @@
 
     function normalizeRow(it){
       const copy = { ...it };
-      // title fallback
       copy.title = copy.title || copy.name || null;
-      // prefer explicit path, else derive from url-like fields
       copy.path = copy.path
         || derivePathFromUrl(copy.public_url)
         || derivePathFromUrl(copy.saved_url)
@@ -420,17 +459,12 @@
     }
 
     async function getProgramURL(it){
-      // Public-first (fast)
       if (it.public_url) return it.public_url;
       if (it.saved_url)  return it.saved_url;
-
-      // Private bucket path → signed URL
       if (it.path){
-        return await signPath(it.path, 300); // 5 minutes
+        return await signPath(it.path, 300);
       }
-      // As a last resort, return legacy url so at least something opens
       if (it.url) return it.url;
-
       throw new Error("No path/url on this row.");
     }
 
@@ -466,13 +500,11 @@
         openBtn.textContent="Open";
         openBtn.target="_blank"; openBtn.rel="noopener";
 
-        // set href lazily when clicked (so signed URL is fresh)
         openBtn.addEventListener("click", async (ev)=>{
           try{
             openBtn.textContent="Open…";
             const url = await getProgramURL(it);
             openBtn.href = url;
-            // allow default navigation after first click
           }catch(e){
             ev.preventDefault();
             toast(e.message||"Open failed", false);
@@ -508,14 +540,14 @@
 
           try{
             shareBtn.disabled=true; shareBtn.textContent="Sharing…";
-            const signedUrl = await getProgramURL(it);   // satisfies NOT NULL url on table
+            const signedUrl = await getProgramURL(it);
             const payload = {
               athlete_user_id: athleteId,
               title: displayTitle,
-              url: signedUrl,                 // keep for NOT NULL constraint / coach web use
+              url: signedUrl,
               program_id: it.id || null,
               coach_name: (coachInput.value||null),
-              path: it.path || null           // app will prefer this for private download
+              path: it.path || null
             };
             const r=await shareProgram(payload);
             if (r?.ok) toast("Shared ✔");
