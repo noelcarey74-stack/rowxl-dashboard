@@ -317,6 +317,71 @@
     }
     $("#composeSaveBtn")?.addEventListener("click", saveComposedProgram);
 
+    /* ===== Requests renderer (added back) ===== */
+    function renderRequests(items){
+      const tbody = $("#reqRows"); tbody.innerHTML = "";
+      if (!items?.length){
+        tbody.innerHTML = `<tr><td class="empty" colspan="5">No requests yet.</td></tr>`;
+        return;
+      }
+
+      for(const it of items){
+        const tr = document.createElement("tr");
+
+        // Request cell (title + tiny JSON preview)
+        const reqCell = document.createElement("td");
+        const title = document.createElement("div");
+        title.style.fontWeight="600";
+        title.className="ellipsis clickable";
+        title.title = it.title || "program request";
+        title.textContent = it.title || "program request";
+
+        const prev = document.createElement("div");
+        prev.className = "tiny mono ellipsis clickable";
+        const p = it.payload || {};
+        const snap = {
+          category: p.category, gender: p.gender, boat: p.boat_class || null,
+          start: p.start_date, finish: p.finish_date,
+          intensity: p.intensity_percent, Mon: p.weekly_schedule?.Mon, Tue: p.weekly_schedule?.Tue, Wed: p.weekly_schedule?.Wed
+        };
+        const previewText = JSON.stringify(snap);
+        prev.title = previewText;
+        prev.textContent = previewText;
+        reqCell.append(title, prev);
+
+        const fullRequestJSON = JSON.stringify(it.payload ?? {}, null, 2);
+        const openReqPreview = () => showPeek(it.title || "Program request", fullRequestJSON);
+        title.addEventListener("click", openReqPreview);
+        prev.addEventListener("click", openReqPreview);
+
+        // Athlete identity
+        const athleteCell=document.createElement("td");
+        const nm=document.createElement("div"); nm.textContent = it.athlete_name || "—";
+        const em=document.createElement("div"); em.className="tiny ellipsis"; em.textContent = it.athlete_email || "—"; em.title = it.athlete_email || "";
+        const uid=document.createElement("div"); uid.className="tiny ellipsis"; uid.style.opacity=0.85; uid.textContent = it.athlete_user_id || "—"; uid.title = it.athlete_user_id || "";
+        athleteCell.append(nm, em, uid);
+
+        // Details (short)
+        const detCell=document.createElement("td");
+        const d1=document.createElement("div"); d1.className="tiny ellipsis"; d1.textContent = `Cat ${p.category||"—"} • Gen ${p.gender||"—"} • Boat ${p.boat_class||"—"}`; d1.title = d1.textContent;
+        const d2=document.createElement("div"); d2.className="tiny ellipsis"; d2.textContent = `Dates ${p.start_date||"—"} → ${p.finish_date||"—"} • Int ${p.intensity_percent??"—"}%`; d2.title = d2.textContent;
+        const d3=document.createElement("div"); d3.className="tiny ellipsis"; d3.textContent = `Mon ${p.weekly_schedule?.Mon||"—"} • Tue ${p.weekly_schedule?.Tue||"—"} • Wed ${p.weekly_schedule?.Wed||"—"} …`; d3.title = d3.textContent;
+        detCell.append(d1,d2,d3);
+
+        // Created
+        const createdCell=document.createElement("td"); createdCell.textContent=prettyDate(it.created_at);
+
+        // Actions
+        const actions = document.createElement("td"); actions.className="row-actions";
+        const viewBtn=document.createElement("button"); viewBtn.className="btn small ghost"; viewBtn.textContent="Preview";
+        viewBtn.onclick=()=> showPeek(it.title || "Program request", fullRequestJSON);
+        actions.append(viewBtn);
+
+        tr.append(reqCell, athleteCell, detCell, createdCell, actions);
+        tbody.appendChild(tr);
+      }
+    }
+
     /* ===== Saved Programs ===== */
 
     // Derive a clean storage path if backend didn't include it (legacy rows with only URL)
