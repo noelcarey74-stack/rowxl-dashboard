@@ -12,7 +12,7 @@
     *{ box-sizing:border-box }
     body{ margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif }
     .wrap{ max-width:1100px; margin:40px auto; padding:0 20px }
-    h1{ margin:0 0 18px; font-size:28px }
+    h1{ margin:0 0 10px; font-size:28px }
 
     .panel{ background:var(--panel); border:1px solid var(--outline); border-radius:10px; padding:14px }
     .controls{ display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin-bottom:14px }
@@ -67,13 +67,19 @@
 <body>
 
   <div style="position:fixed; top:10px; right:10px; font-size:12px; opacity:.9; display:flex; gap:10px; z-index:10">
-    <a href="index.html" style="color:#cfe2ff; padding:6px 10px; border:1px solid #1e3a5f; border-radius:999px; background:#113057; text-decoration:none">Coach Inbox</a>
-    <a href="rowxl-athlete.html" style="color:#cfe2ff; padding:6px 10px; border:1px solid #1e3a5f; border-radius:999px; background:#113057; text-decoration:none">Athlete view</a>
+    <a href="index.html" style="color:#cfe2ff; padding:6px 10px; border:1px solid var(--outline); border-radius:999px; background:#113057; text-decoration:none">Coach Inbox</a>
+    <a href="rowxl-athlete.html" style="color:#cfe2ff; padding:6px 10px; border:1px solid var(--outline); border-radius:999px; background:#113057; text-decoration:none">Athlete view</a>
   </div>
 
   <div class="wrap">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <h1>RowXL — Program Requests & Saved Programs</h1>
+      <div>
+        <h1>RowXL — Program Requests & Saved Programs</h1>
+        <!-- Permanent gentle notice -->
+        <div class="tiny" style="margin:4px 0 0; opacity:.9">
+          Please download programs within <strong>90 days</strong> — share links may expire after that.
+        </div>
+      </div>
       <div class="tiny" style="padding:6px 10px;border:1px solid var(--outline);border-radius:999px;background:var(--panel2)">
         Testing mode (no sign-in)
       </div>
@@ -193,6 +199,10 @@
     const COACH_SECRET  = "abc1234";
     const PROGRAM_BUCKET = "programs";          // storage bucket name
 
+    /* === Link lifetime (90 days) === */
+    // One place to tweak the policy later if you change your mind.
+    const SHARE_EXPIRES_SEC = 90 * 24 * 60 * 60; // 90 days
+
     /* ===== Helpers ===== */
     const $ = s => document.querySelector(s);
     const coachInput=$("#coachInput");
@@ -230,7 +240,7 @@
     }
 
     // Signer (for private bucket) — separate warning block
-    async function signPath(path, expires=300){
+    async function signPath(path, expires=SHARE_EXPIRES_SEC){
       try{
         const res = await _fetch("program-sign", { method:"POST", body: JSON.stringify({ bucket: PROGRAM_BUCKET, path, expires }) });
         if (!res?.url) throw new Error("sign failed");
@@ -458,13 +468,34 @@
       return String(basis).split("/").slice(-1)[0];
     }
 
+    // Try to make/refresh a usable URL:
+    // - Prefer public_url
+    // - If saved_url exists, HEAD it; if it looks expired and we have a path, re-sign for 90 days
+    // - If only path, sign for 90 days
     async function getProgramURL(it){
       if (it.public_url) return it.public_url;
-      if (it.saved_url)  return it.saved_url;
-      if (it.path){
-        return await signPath(it.path, 300);
+
+      if (it.saved_url) {
+        try {
+          const head = await fetch(it.saved_url, { method: "HEAD" });
+          if (head.ok) return it.saved_url;
+          // if we have a path, fall through to sign
+          if (!it.path) {
+            throw new Error("This program link has expired. Please re-share it.");
+          }
+        } catch (_) {
+          // network/CORS errors: if we have path, we'll sign; otherwise throw friendly message
+          if (!it.path) throw new Error("This program link has expired. Please re-share it.");
+        }
       }
+
+      if (it.path){
+        // Always create a fresh long-lived link for reliability
+        return await signPath(it.path, SHARE_EXPIRES_SEC);
+      }
+
       if (it.url) return it.url;
+
       throw new Error("No path/url on this row.");
     }
 
@@ -528,7 +559,13 @@
         const pdfBtn=document.createElement("button");
         pdfBtn.className="btn small";
         pdfBtn.textContent="PDF";
-        pdfBtn.onclick=()=>downloadProgramPDF(it);
+        pdfBtn.onclick=async()=>{
+          try {
+            await downloadProgramPDF(it);
+          } catch (e) {
+            toast(e.message||"PDF failed", false);
+          }
+        };
 
         const shareBtn=document.createElement("button");
         shareBtn.className="btn small primary";
@@ -540,14 +577,15 @@
 
           try{
             shareBtn.disabled=true; shareBtn.textContent="Sharing…";
-            const signedUrl = await getProgramURL(it);
+            const signedUrl = await getProgramURL(it); // long-lived if we had to sign
             const payload = {
               athlete_user_id: athleteId,
               title: displayTitle,
               url: signedUrl,
               program_id: it.id || null,
               coach_name: (coachInput.value||null),
-              path: it.path || null
+              path: it.path || null,
+              expires_at: new Date(Date.now() + SHARE_EXPIRES_SEC*1000).toISOString()
             };
             const r=await shareProgram(payload);
             if (r?.ok) toast("Shared ✔");
@@ -575,28 +613,27 @@
 
     /* ===== Minimal PDF builder (client-side) ===== */
     async function downloadProgramPDF(row) {
-      try {
-        const url = await getProgramURL(row);
-        const md = await (await fetch(url)).text();
+      const url = await getProgramURL(row);
+      const md = await (await fetch(url)).text();
 
-        const safe = md
-          .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-          .replace(/#### (.*)$/gm,"<h4>$1</h4>")
-          .replace(/### (.*)$/gm,"<h3>$1</h3>")
-          .replace(/## (.*)$/gm,"<h2>$1</h2>")
-          .replace(/# (.*)$/gm,"<h1>$1</h1>")
-          .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>")
-          .replace(/\n---\n/g,'<hr>')
-          .replace(/\n/g,"<br>");
+      const safe = md
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replace(/#### (.*)$/gm,"<h4>$1</h4>")
+        .replace(/### (.*)$/gm,"<h3>$1</h3>")
+        .replace(/## (.*)$/gm,"<h2>$1</h2>")
+        .replace(/# (.*)$/gm,"<h1>$1</h1>")
+        .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>")
+        .replace(/\n---\n/g,'<hr>')
+        .replace(/\n/g,"<br>");
 
-        const coach  = row.coach_name || "—";
-        const athleteName  = row.athlete_name || "—";
-        const athleteEmail = row.athlete_email || "—";
-        const created= row.created_at ? new Date(row.created_at) : null;
-        const createdPretty = created ? created.toLocaleString(undefined,{hour12:false}) : "—";
-        const title = displayNameFromRow(row);
+      const coach  = row.coach_name || "—";
+      const athleteName  = row.athlete_name || "—";
+      const athleteEmail = row.athlete_email || "—";
+      const created= row.created_at ? new Date(row.created_at) : null;
+      const createdPretty = created ? created.toLocaleString(undefined,{hour12:false}) : "—";
+      const title = displayNameFromRow(row);
 
-        const html = `<!doctype html>
+      const html = `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -636,11 +673,10 @@
   </div>
 </body>
 </html>`;
-        const blob = new Blob([html], {type:"text/html"});
-        const href = URL.createObjectURL(blob);
-        const w = window.open(href, "_blank");
-        if (!w) alert("Popup blocked — please allow popups to save PDF.");
-      } catch (e) { console.error(e); alert(e.message || String(e)); }
+      const blob = new Blob([html], {type:"text/html"});
+      const href = URL.createObjectURL(blob);
+      const w = window.open(href, "_blank");
+      if (!w) alert("Popup blocked — please allow popups to save PDF.");
     }
 
     /* ===== Loaders ===== */
