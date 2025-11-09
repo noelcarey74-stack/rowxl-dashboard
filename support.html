@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RowXL — Support</title>
+  <meta name="description" content="Help, FAQ, contact, privacy and terms for the RowXL app." />
+  <style>
+    :root{
+      --bg:#0a1a2f;    /* brand navy */
+      --panel:#0f2747; /* dark panel */
+      --ink:#e9f0fb;   /* light text */
+      --muted:#9fb5d1; /* muted */
+      --accent:#0ea3a7;/* teal accent */
+      --line:#193454;  /* borders */
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{max-width:980px;margin:0 auto;padding:28px 18px}
+    header{display:flex;align-items:center;gap:14px;padding:22px 0}
+    .logo{display:inline-flex;align-items:center;gap:10px}
+    .logo-mark{width:36px;height:36px;border-radius:10px;background:#0d1e37;display:grid;place-items:center;box-shadow:0 0 0 1px #123}
+    .logo-mark span{font-weight:700;color:white}
+    h1{font-size:28px;margin:0}
+    nav{margin-left:auto;display:flex;gap:18px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0}
+    h2{font-size:22px;margin:8px 0 6px 0}
+    h3{font-size:18px;margin:16px 0 8px}
+    .grid{display:grid;gap:14px}
+    @media(min-width:820px){.grid{grid-template-columns:1fr 1fr}}
+    code, .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    footer{opacity:.8;font-size:13px;padding:32px 0}
+    .pill{display:inline-block;border:1px solid var(--line);background:#0c203a;border-radius:999px;padding:6px 12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">
+        <div class="logo-mark"><span>⎈</span></div>
+        <h1>RowXL — Support</h1>
+      </div>
+      <nav>
+        <a href="#contact" class="pill">Contact</a>
+        <a href="#faq" class="pill">FAQ</a>
+        <a href="#privacy" class="pill">Privacy</a>
+        <a href="#terms" class="pill">Terms</a>
+      </nav>
+    </header>
+
+    <section class="card" id="overview">
+      <h2>Overview</h2>
+      <p>Welcome to the RowXL support page. Here you’ll find help, a quick FAQ, and our privacy & terms in one place. If you’re a coach or tester looking for the web dashboard, use <a href="https://dashboard.rowxl.com">dashboard.rowxl.com</a>.</p>
+      <p class="mono">App: RowXL • Version 1.0 • © <span id="year"></span> Noel Carey</p>
+    </section>
+
+    <div class="grid">
+      <section class="card" id="contact">
+        <h2>Contact</h2>
+        <p>Email us any time:</p>
+        <ul>
+          <li>Support: <a href="mailto:support@rowxl.com">support@rowxl.com</a></li>
+          <li>General: <a href="mailto:info@rowxl.com">info@rowxl.com</a></li>
+        </ul>
+        <p>We aim to reply within 2 business days.</p>
+      </section>
+
+      <section class="card" id="faq">
+        <h2>FAQ (Quick)</h2>
+        <h3>How do I get help with a purchase?</h3>
+        <p>Send your Apple receipt and a short description to <a href="mailto:support@rowxl.com">support@rowxl.com</a>.</p>
+        <h3>Where is my data stored?</h3>
+        <p>We use Supabase (EU region) for secure authentication and storage. See <a href="#privacy">Privacy</a> for details.</p>
+        <h3>How do I delete my account/data?</h3>
+        <p>Email <a href="mailto:support@rowxl.com">support@rowxl.com</a> from the address used in-app. We’ll confirm and process deletion within 7 days.</p>
+      </section>
+    </div>
+
+    <section class="card" id="privacy">
+      <h2>Privacy Policy</h2>
+      <p>This policy explains what we collect and why. It applies to the RowXL iOS app and this website.</p>
+      <h3>What we collect</h3>
+      <ul>
+        <li>Account info (email) for sign-in and support.</li>
+        <li>Uploaded training media and analysis reports, stored securely and auto-deleted per in-app policy.</li>
+        <li>Basic diagnostics (crash logs, performance) to improve stability.</li>
+      </ul>
+      <h3>How we use data</h3>
+      <ul>
+        <li>Provide and improve RowXL features.</li>
+        <li>Offer support when you contact us.</li>
+        <li>Comply with legal requirements and App Store policies.</li>
+      </ul>
+      <h3>Sharing</h3>
+      <p>We don’t sell personal data. We use processors (e.g., Apple, Supabase) under strict agreements.</p>
+      <h3>Security</h3>
+      <p>Transport is encrypted via HTTPS. Access is restricted and logged. You can request deletion at any time.</p>
+      <h3>Contact</h3>
+      <p>Questions? <a href="mailto:support@rowxl.com">support@rowxl.com</a></p>
+    </section>
+
+    <section class="card" id="terms">
+      <h2>Terms of Use</h2>
+      <p>By using RowXL you agree to these terms:</p>
+      <ul>
+        <li>RowXL is provided “as is.” We aim for reliability but don’t guarantee uninterrupted service.</li>
+        <li>Don’t upload unlawful or infringing content. You must have rights to media you submit.</li>
+        <li>Coaching outputs are guidance, not medical advice. Train responsibly.</li>
+        <li>Subscriptions, if any, are managed through Apple in accordance with App Store rules.</li>
+        <li>Governing law: Ireland. Contact us for any disputes or questions.</li>
+      </ul>
+      <p>For Apple’s Licensed Application End User License Agreement, see Apple’s standard EULA.</p>
+    </section>
+
+    <footer class="wrap">
+      <div>© <span id="year2"></span> Noel Carey • RowXL • <a href="https://rowxl.com">rowxl.com</a></div>
+    </footer>
+  </div>
+  <script>
+    const y=new Date().getFullYear();
+    document.getElementById('year').textContent=y;
+    document.getElementById('year2').textContent=y;
+  </script>
+</body>
+</html>
