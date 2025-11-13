@@ -77,19 +77,22 @@
 
       const file = fileInput.files[0];
 
-      // Build form data for upload
       const form = new FormData();
       form.append("file", file);
 
-      // YOUR Supabase function endpoint (keep your domain)
+      // ✔ Your EXACT live function URL
       const FUNCTION_URL =
-        "https://YOUR_PROJECT.supabase.co/functions/v1/video-analyze";
+        "https://cketlapkaqmhtmthxozu.supabase.co/functions/v1/-video-analyze";
 
       try {
         const res = await fetch(FUNCTION_URL, {
           method: "POST",
           body: form,
         });
+
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status + " - " + (await res.text()));
+        }
 
         const json = await res.json();
         output.textContent = JSON.stringify(json, null, 2);
