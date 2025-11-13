@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RowXL – Video Analyzer</title>
+
   <style>
     body {
       background: #071a2c;
@@ -12,30 +13,21 @@
       padding: 40px;
       text-align: center;
     }
-    .    .card {
+
+    .card {
       background: #0d2640;
       border-radius: 12px;
       padding: 30px;
-      max-width: 1000px;   /* was 700px */
+      max-width: 1200px;
       margin: auto;
-      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      box-shadow: 0 0 30px rgba(0,0,0,0.4);
     }
 
-    pre {
-      background: #00101f;
-      padding: 20px;
-      border-radius: 12px;
-      text-align: left;
-      overflow-x: auto;
-      margin-top: 25px;
-      max-height: 70vh;    /* use most of the screen height */
-      font-size: 13px;     /* slightly smaller text for big JSON */
-      white-space: pre-wrap;
-    }
     input[type="file"] {
       margin: 20px 0;
       padding: 10px;
     }
+
     button {
       background: #1b78f2;
       padding: 12px 25px;
@@ -46,17 +38,23 @@
       cursor: pointer;
       margin-top: 20px;
     }
+
     button:hover {
       background: #3c92ff;
     }
+
     pre {
       background: #00101f;
       padding: 20px;
       border-radius: 12px;
       text-align: left;
+      overflow-y: auto;
       overflow-x: auto;
       margin-top: 25px;
-      max-height: 600px;
+      max-height: 80vh;
+      font-size: 14px;
+      white-space: pre-wrap;
+      border: 1px solid #0f3558;
     }
   </style>
 </head>
@@ -76,12 +74,13 @@
   </div>
 
   <script>
-    // Same Supabase project + anon key you already use in other dashboard pages
+    // Supabase project configuration
     const SUPABASE_URL = "https://cketlapkaqmhtmthxozu.supabase.co";
     const SUPABASE_ANON_KEY =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZXRsYXBrYXFtaHRtdGh4b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NjIwMzgsImV4cCI6MjA3NzMzODAzOH0.wfmjPBb-7cNpmlV2JByRHGAwkKjsrK7fHd2D7wlf5oA";
 
-    const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/-video-analyze`;
+    // FIXED — Correct URL (NO DASH)
+    const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/video-analyze`;
 
     async function sendVideo() {
       const fileInput = document.getElementById("fileInput");
@@ -102,7 +101,6 @@
         const res = await fetch(FUNCTION_URL, {
           method: "POST",
           headers: {
-            // These two headers satisfy Supabase Edge auth
             apikey: SUPABASE_ANON_KEY,
             Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
           },
@@ -119,7 +117,6 @@
         try {
           json = JSON.parse(text);
         } catch {
-          // sometimes might not be JSON – just show raw
           output.textContent = text;
           return;
         }
