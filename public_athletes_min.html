@@ -29,14 +29,15 @@
     select{ background:#0c203e; color:var(--text); border:1px solid #ffffff22; border-radius:10px; padding:8px 10px }
     a { color:#7dd3fc; text-decoration:none }
   </style>
+
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
     const SUPABASE_URL = "https://cketlapkaqmhtmthxozu.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZXRsYXBrYXFtaHRtdGh4b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NjIwMzgsImV4cCI6MjA3NzMzODAzOH0.wfmjPBb-7cNpmlV2JByRHGAwkKjsrK7fHd2D7wlf5oA";
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // If you created public_athletes_min, set this to true to resolve names.
     const USE_ATHLETE_NAMES = true;
 
     async function fetchCounts(){
@@ -45,32 +46,32 @@
       const monthEl = document.querySelector("#month");
       tbody.innerHTML = `<tr><td colspan="5" class="muted">Loading…</td></tr>`;
 
-      // 1) counts this month
       const { data: counts, error } = await supabase
         .from("upload_counts_current_month")
         .select("*");
+
       if(error){
         tbody.innerHTML = `<tr><td colspan="5" class="muted">Error: ${error.message}</td></tr>`;
         return;
       }
 
-      // 2) optional: map user_id -> name/email
       let nameMap = {};
       if (USE_ATHLETE_NAMES){
         const { data: people } = await supabase
           .from("public_athletes_min")
           .select("user_id, name, email");
+
         if (people) {
-          for (const p of people) nameMap[p.user_id] = { name: p.name, email: p.email };
+          for (const p of people) {
+            nameMap[p.user_id] = { name: p.name, email: p.email };
+          }
         }
       }
 
-      // compute max for bar scale
       const max = Math.max(1, ...counts.map(r => r.uploads));
       const totalUploads = counts.reduce((a,b)=>a + b.uploads, 0);
       totalEl.textContent = totalUploads.toString();
 
-      // month label
       if (counts.length > 0) {
         const m = new Date(counts[0].month);
         monthEl.textContent = m.toLocaleString(undefined, { month: "long", year: "numeric" });
@@ -78,10 +79,8 @@
         monthEl.textContent = new Date().toLocaleString(undefined, { month: "long", year: "numeric" });
       }
 
-      // sort desc
       counts.sort((a,b)=> b.uploads - a.uploads);
 
-      // rows
       tbody.innerHTML = "";
       for (const row of counts){
         const info = nameMap[row.user_id] || {};
@@ -105,7 +104,6 @@
         tbody.appendChild(tr);
       }
 
-      // copy uid handler
       tbody.addEventListener("click", (e)=>{
         const a = e.target.closest("a.copy");
         if (!a) return;
@@ -122,14 +120,20 @@
     });
   </script>
 </head>
+
 <body>
   <div class="wrap">
     <h1>RowXL — Uploads <span class="muted" id="month"></span></h1>
 
     <div class="controls">
       <button id="refresh">Refresh</button>
+
+      <!-- ⭐ NEW BUTTON ADDED HERE ⭐ -->
+      <button onclick="window.location.href='analyzer.html'">Video Analyzer</button>
+
       <div class="muted">Total this month: <strong id="total">0</strong></div>
       <div style="flex:1"></div>
+
       <a href="index.html" class="muted">Coach Inbox</a>
       <span class="muted">·</span>
       <a href="rowxl-programs.html" class="muted">Programs</a>
@@ -146,6 +150,7 @@
             <th>Actions</th>
           </tr>
         </thead>
+
         <tbody id="rows">
           <tr><td colspan="5" class="muted">Loading…</td></tr>
         </tbody>
