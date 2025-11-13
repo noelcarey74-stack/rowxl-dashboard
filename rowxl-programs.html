@@ -66,9 +66,12 @@
 </head>
 <body>
 
+  <!-- Top-right nav with new Video Analyzer button/link -->
   <div style="position:fixed; top:10px; right:10px; font-size:12px; opacity:.9; display:flex; gap:10px; z-index:10">
     <a href="index.html" style="color:#cfe2ff; padding:6px 10px; border:1px solid var(--outline); border-radius:999px; background:#113057; text-decoration:none">Coach Inbox</a>
     <a href="rowxl-athlete.html" style="color:#cfe2ff; padding:6px 10px; border:1px solid var(--outline); border-radius:999px; background:#113057; text-decoration:none">Athlete view</a>
+    <!-- ⭐ New Video Analyzer button -->
+    <a href="analyzer.html" style="color:#cfe2ff; padding:6px 10px; border:1px solid var(--outline); border-radius:999px; background:#113057; text-decoration:none">Video Analyzer</a>
   </div>
 
   <div class="wrap">
@@ -200,8 +203,7 @@
     const PROGRAM_BUCKET = "programs";          // storage bucket name
 
     /* === Link lifetime (90 days) === */
-    // One place to tweak the policy later if you change your mind.
-    const SHARE_EXPIRES_SEC = 90 * 24 * 60 * 60; // 90 days
+    const SHARE_EXPIRES_SEC = 90 * 24 * 60 * 60;
 
     /* ===== Helpers ===== */
     const $ = s => document.querySelector(s);
@@ -218,7 +220,6 @@
     function hideCompose(){ $("#compose").style.display = "none"; _composeCtx = null; }
     window.hideCompose = hideCompose;
 
-    // Copy helper
     async function copy(text){ try{ await navigator.clipboard.writeText(text); toast("Copied ✔"); }catch(e){ toast("Copy failed",false); } }
 
     /* ===== Edge wrappers ===== */
@@ -239,7 +240,6 @@
       return ct.includes("application/json") ? res.json() : res.text();
     }
 
-    // Signer (for private bucket) — separate warning block
     async function signPath(path, expires=SHARE_EXPIRES_SEC){
       try{
         const res = await _fetch("program-sign", { method:"POST", body: JSON.stringify({ bucket: PROGRAM_BUCKET, path, expires }) });
@@ -254,7 +254,6 @@
       }
     }
 
-    // REST helper (PostgREST)
     const sbRest = (pathWithQuery, init={}) => fetch(`${SUPABASE_URL}/rest/v1/${pathWithQuery}`, {
       ...init,
       headers: {
@@ -266,7 +265,6 @@
       }
     });
 
-    // Requests view
     const fetchProgramRequestsREST = async (limit=20) => {
       const q = `program_requests_v?select=id,title,payload,athlete_user_id,athlete_name,athlete_email,created_at,status&order=created_at.desc&limit=${limit}`;
       const res = await sbRest(q);
@@ -274,13 +272,11 @@
       return res.json();
     };
 
-    // Functions (must exist)
     const generateProgram = (payload) => _fetch("program-generate", { method:"POST", body: JSON.stringify(payload) });
     const listPrograms    = (limit=200)      => _fetch(`program-list?limit=${limit}`, { method:"GET" });
     const shareProgram    = (payload)        => _fetch("program-share", { method:"POST", body: JSON.stringify(payload) });
     const deleteProgram   = (payload)        => _fetch("program-delete", { method:"POST", body: JSON.stringify(payload) });
 
-    /* ===== Compose editor ===== */
     let _composeCtx = null;
     function showCompose(ctx){
       _composeCtx = ctx;
@@ -327,7 +323,6 @@
     }
     $("#composeSaveBtn")?.addEventListener("click", saveComposedProgram);
 
-    /* ===== Program Requests renderer (FIX ADDED) ===== */
     function renderRequests(items){
       const tbody = $("#reqRows"); tbody.innerHTML = "";
       if (!items?.length){
@@ -338,7 +333,6 @@
       for(const it of items){
         const tr = document.createElement("tr");
 
-        // request cell
         const reqCell = document.createElement("td");
         const title = document.createElement("div");
         title.style.fontWeight="600";
@@ -366,7 +360,6 @@
         title.addEventListener("dblclick", () => copy(fullRequestJSON));
         prev.addEventListener("dblclick", () => copy(fullRequestJSON));
 
-        // athlete identity
         const athleteCell=document.createElement("td");
         const nm=document.createElement("div"); nm.textContent = it.athlete_name || "—";
         const em=document.createElement("div"); em.className="tiny ellipsis"; em.textContent = it.athlete_email || "—"; em.title = it.athlete_email || "";
@@ -384,7 +377,6 @@
         });
         athleteCell.addEventListener("dblclick", () => copy([it.athlete_name,it.athlete_email,it.athlete_user_id].join(" | ")));
 
-        // details
         const detCell=document.createElement("td");
         const d1=document.createElement("div"); d1.className="tiny ellipsis"; d1.textContent = `Cat ${p.category||"—"} • Gen ${p.gender||"—"} • Boat ${p.boat_class||"—"}`; d1.title = d1.textContent;
         const d2=document.createElement("div"); d2.className="tiny ellipsis"; d2.textContent = `Dates ${p.start_date||"—"} → ${p.finish_date||"—"} • Int ${p.intensity_percent??"—"}%`; d2.title = d2.textContent;
@@ -398,10 +390,8 @@
         });
         detCell.addEventListener("dblclick", () => copy(JSON.stringify(p, null, 2)));
 
-        // created
         const createdCell=document.createElement("td"); createdCell.textContent=prettyDate(it.created_at);
 
-        // actions
         const actions = document.createElement("td"); actions.className="row-actions";
         const viewBtn=document.createElement("button"); viewBtn.className="btn small ghost"; viewBtn.textContent="Preview";
         viewBtn.onclick=()=> showPeek(it.title || "Program request", fullRequestJSON);
@@ -436,9 +426,6 @@
       }
     }
 
-    /* ===== Saved Programs ===== */
-
-    // Derive a clean storage path if backend didn't include it (legacy rows with only URL)
     function derivePathFromUrl(url){
       if (!url) return null;
       try{
@@ -468,10 +455,6 @@
       return String(basis).split("/").slice(-1)[0];
     }
 
-    // Try to make/refresh a usable URL:
-    // - Prefer public_url
-    // - If saved_url exists, HEAD it; if it looks expired and we have a path, re-sign for 90 days
-    // - If only path, sign for 90 days
     async function getProgramURL(it){
       if (it.public_url) return it.public_url;
 
@@ -479,18 +462,15 @@
         try {
           const head = await fetch(it.saved_url, { method: "HEAD" });
           if (head.ok) return it.saved_url;
-          // if we have a path, fall through to sign
           if (!it.path) {
             throw new Error("This program link has expired. Please re-share it.");
           }
         } catch (_) {
-          // network/CORS errors: if we have path, we'll sign; otherwise throw friendly message
           if (!it.path) throw new Error("This program link has expired. Please re-share it.");
         }
       }
 
       if (it.path){
-        // Always create a fresh long-lived link for reliability
         return await signPath(it.path, SHARE_EXPIRES_SEC);
       }
 
@@ -577,7 +557,7 @@
 
           try{
             shareBtn.disabled=true; shareBtn.textContent="Sharing…";
-            const signedUrl = await getProgramURL(it); // long-lived if we had to sign
+            const signedUrl = await getProgramURL(it);
             const payload = {
               athlete_user_id: athleteId,
               title: displayTitle,
@@ -611,7 +591,6 @@
       }
     }
 
-    /* ===== Minimal PDF builder (client-side) ===== */
     async function downloadProgramPDF(row) {
       const url = await getProgramURL(row);
       const md = await (await fetch(url)).text();
@@ -679,7 +658,6 @@
       if (!w) alert("Popup blocked — please allow popups to save PDF.");
     }
 
-    /* ===== Loaders ===== */
     async function loadRequests(){
       try{
         $("#reqRows").innerHTML=`<tr><td class="empty" colspan="5">Loading…</td></tr>`;
@@ -698,7 +676,6 @@
         let data = await listPrograms(200);
         let items = data?.items || [];
 
-        // Fallback to REST if function missing/empty
         if (!items.length) {
           const res = await sbRest('program_files?select=*&order=created_at.desc&limit=200');
           if (res.ok) items = await res.json();
@@ -711,12 +688,10 @@
       }
     }
 
-    // Wire controls
     $("#refreshBtn").addEventListener("click", loadRequests);
     $("#limitSelect").addEventListener("change", loadRequests);
     $("#loadProgramsBtn").addEventListener("click", loadPrograms);
 
-    // Initial load
     loadRequests();
   </script>
 </body>
