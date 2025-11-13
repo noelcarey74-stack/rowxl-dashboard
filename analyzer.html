@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rowing Video Analyzer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #050816;
+      --bg-alt: #0b1020;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.12);
+      --accent-strong: rgba(59, 130, 246, 0.3);
+      --danger: #ef4444;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --border: #111827;
+      --card: #020617;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --shadow-soft: 0 20px 40px rgba(15, 23, 42, 0.65);
+      --transition-fast: 150ms ease-out;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #111827 0, #020617 45%, #000 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 1100px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), #020617);
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .shell {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 18px;
+      }
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      gap: 12px;
+    }
+
+    .title-block h1 {
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-pill {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      color: var(--muted);
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: radial-gradient(circle, var(--accent) 0, transparent 55%);
+    }
+
+    .pill-button {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.9);
+      padding: 6px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background var(--transition-fast), border-color var(--transition-fast),
+        transform var(--transition-fast);
+    }
+
+    .pill-button:hover {
+      background: rgba(17, 24, 39, 0.95);
+      border-color: rgba(148, 163, 184, 0.8);
+      transform: translateY(-0.5px);
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel {
+      background: radial-gradient(circle at top left, #020617 0, #020617 32%, #020617 100%);
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(31, 41, 55, 0.85);
+      padding: 16px 16px 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        circle at top left,
+        rgba(59, 130, 246, 0.22),
+        transparent 55%
+      );
+      opacity: 0.65;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .panel-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .panel-label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel-label-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, rgba(75, 85, 99, 0.5), transparent);
+    }
+
+    .drop-zone {
+      border-radius: var(--radius-lg);
+      border: 1.5px dashed rgba(148, 163, 184, 0.5);
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), #020617);
+      padding: 22px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--transition-fast), background var(--transition-fast),
+        transform var(--transition-fast), box-shadow var(--transition-fast);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .drop-zone.dragover {
+      border-color: var(--accent);
+      background: radial-gradient(circle at top, rgba(37, 99, 235, 0.22), #020617);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .drop-title {
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .drop-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .pill-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.65);
+      font-size: 11px;
+      padding: 4px 10px;
+      color: var(--text);
+      background: rgba(15, 23, 42, 0.95);
+      margin-bottom: 2px;
+    }
+
+    .pill-cta span {
+      opacity: 0.75;
+    }
+
+    .hint-text {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .file-info {
+      margin-top: 10px;
+      padding: 9px 10px;
+      border-radius: 999px;
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.7);
+    }
+
+    .file-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 250px;
+    }
+
+    .file-size {
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 0.9;
+    }
+
+    .controls-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .left-hints {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .left-hints strong {
+      color: #e5e7eb;
+    }
+
+    .analyze-btn {
+      border-radius: 999px;
+      border: none;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: radial-gradient(circle at top left, #3b82f6, #1d4ed8);
+      color: white;
+      box-shadow: 0 12px 25px rgba(37, 99, 235, 0.65);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+        opacity var(--transition-fast), background var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .analyze-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .analyze-btn:not(:disabled):hover {
+      transform: translateY(-1px) translateZ(0);
+      box-shadow: 0 16px 32px rgba(37, 99, 235, 0.8);
+      background: radial-gradient(circle at top left, #60a5fa, #2563eb);
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      border: 2px solid rgba(191, 219, 254, 0.25);
+      border-top-color: white;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .status-strip {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #4ade80;
+      box-shadow: 0 0 12px rgba(74, 222, 128, 0.7);
+    }
+
+    .status-dot.error {
+      background: var(--danger);
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.75);
+    }
+
+    .status-text-strong {
+      color: #e5e7eb;
+    }
+
+    .result-card {
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(55, 65, 81, 0.85);
+      background: radial-gradient(circle at top right, #020617 0, #020617 40%, #020617 100%);
+      padding: 12px 13px 11px;
+      font-size: 13px;
+      color: #e5e7eb;
+      margin-bottom: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.22), transparent 55%);
+      opacity: 0.6;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .result-card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+
+    .result-title {
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .confidence-pill {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(59, 130, 246, 0.7);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #bfdbfe;
+    }
+
+    .confidence-bar {
+      position: relative;
+      margin-top: 6px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(31, 41, 55, 0.95);
+      overflow: hidden;
+    }
+
+    .confidence-fill {
+      position: absolute;
+      inset: 0;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(to right, #22c55e, #eab308, #f97316, #ef4444);
+      transition: width 200ms ease-out;
+    }
+
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 12px;
+      margin-top: 9px;
+    }
+
+    .kv-item {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .kv-item span {
+      color: #e5e7eb;
+    }
+
+    .flags-row {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .flag-pill {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      color: var(--muted);
+    }
+
+    .notes-block {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .notes-block strong {
+      color: #e5e7eb;
+    }
+
+    .json-panel {
+      border-radius: var(--radius-lg);
+      background: radial-gradient(circle at top left, #020617 0, #020617 40%, #020617 100%);
+      border: 1px solid rgba(31, 41, 55, 0.85);
+      padding: 10px 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+        "Courier New", monospace;
+      font-size: 12px;
+      color: #e5e7eb;
+      overflow: auto;
+      max-height: 260px;
+      position: relative;
+    }
+
+    .json-panel pre {
+      margin: 0;
+      white-space: pre;
+    }
+
+    .json-header {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .json-copy-btn {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--muted);
+      cursor: pointer;
+      transition: background var(--transition-fast), border-color var(--transition-fast),
+        transform var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .json-copy-btn:hover {
+      background: rgba(17, 24, 39, 0.95);
+      border-color: rgba(148, 163, 184, 0.9);
+      transform: translateY(-0.5px);
+    }
+
+    .json-placeholder {
+      font-size: 12px;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .error-text {
+      color: #fecaca;
+      font-size: 11px;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="title-block">
+        <h1>
+          Rowing Video Analyzer
+          <span class="title-pill">Phase 1 · Boat / Crew / Viewpoint</span>
+        </h1>
+        <p class="subtitle">
+          Drop a rowing clip, send it to the AI, and get structured detection for boat type,
+          crew size, and camera viewpoint. No storage, just instant JSON.
+        </p>
+        <div class="badge-row">
+          <span class="badge">
+            <span class="badge-dot"></span> Live JSON
+          </span>
+          <span class="badge">
+            <span class="badge-dot"></span> Supabase Edge Function Ready
+          </span>
+          <span class="badge">
+            <span class="badge-dot"></span> No Buckets · No Auth
+          </span>
+        </div>
+      </div>
+      <button type="button" class="pill-button" id="mockBtn" title="Fill with example JSON">
+        ⚙️ Mock response
+      </button>
+    </header>
+
+    <!-- LEFT COLUMN: Upload + Controls -->
+    <div class="col">
+      <div class="panel">
+        <div class="panel-inner">
+          <div class="panel-label">
+            INPUT CLIP
+            <span class="panel-label-line"></span>
+          </div>
+
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-title">Drag &amp; drop a rowing video</div>
+            <div class="drop-sub">
+              MP4 / MOV / WebM · max ~200&nbsp;MB recommended
+            </div>
+            <button type="button" class="pill-cta" id="browseBtn">
+              <span>Browse video</span> ⌁
+            </button>
+            <div class="hint-text">
+              Model only needs a short segment. Technique analysis will come later.
+            </div>
+            <input type="file" id="fileInput" accept="video/*" />
+          </div>
+
+          <div id="fileInfoContainer" style="display:none;">
+            <div class="file-info" id="fileInfo">
+              <span class="file-dot"></span>
+              <span class="file-name" id="fileName"></span>
+              <span class="file-size" id="fileSize"></span>
+            </div>
+          </div>
+
+          <div class="controls-row">
+            <div class="left-hints">
+              <div><strong>Step 1:</strong> Drop or browse a rowing clip.</div>
+              <div><strong>Step 2:</strong> Hit Analyze and wait for JSON.</div>
+            </div>
+            <button type="button" class="analyze-btn" id="analyzeBtn" disabled>
+              <span id="analyzeSpinner" class="spinner" style="display:none;"></span>
+              <span id="analyzeLabel">Analyze</span>
+            </button>
+          </div>
+
+          <div class="status-strip" id="statusStrip">
+            <span class="status-dot"></span>
+            <span id="statusText">
+              Waiting for video…
+            </span>
+          </div>
+
+          <div id="errorBox" class="error-text" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Results + JSON -->
+    <div class="col">
+      <div class="panel">
+        <div class="panel-inner">
+          <div class="panel-label">
+            ANALYSIS RESULT
+            <span class="panel-label-line"></span>
+          </div>
+
+          <div id="resultContainer">
+            <div class="result-card" id="resultCard" style="display:none;">
+              <div class="result-card-inner">
+                <div class="result-header">
+                  <div class="result-title">Frame Summary</div>
+                  <div class="confidence-pill" id="confidencePill" style="display:none;">
+                    <span>Confidence</span>
+                    <span id="confidenceValue"></span>
+                  </div>
+                </div>
+                <div class="confidence-bar">
+                  <div class="confidence-fill" id="confidenceFill"></div>
+                </div>
+                <div class="kv-grid">
+                  <div class="kv-item">
+                    Boat detected:
+                    <span id="boatDetected">–</span>
+                  </div>
+                  <div class="kv-item">
+                    Boat type:
+                    <span id="boatType">–</span>
+                  </div>
+                  <div class="kv-item">
+                    Crew size:
+                    <span id="crewSize">–</span>
+                  </div>
+                  <div class="kv-item">
+                    Viewpoint:
+                    <span id="viewpoint">–</span>
+                  </div>
+                </div>
+                <div class="flags-row" id="flagsRow" style="display:none;"></div>
+                <div class="notes-block" id="notesBlock" style="display:none;">
+                  <strong>Notes:</strong>
+                  <span id="notesText"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="json-panel">
+              <div class="json-header">
+                <span>Raw JSON</span>
+                <button type="button" class="json-copy-btn" id="copyJsonBtn">
+                  Copy JSON
+                </button>
+              </div>
+              <pre id="jsonOutput">
+<span class="json-placeholder">Awaiting first analysis…</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === CONFIG: Update this when the Edge Function URL is ready ===
+    const API_URL = "/analyze"; 
+    // e.g. "https://YOUR-PROJECT.functions.supabase.co/row-analyzer"
+
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+    const browseBtn = document.getElementById("browseBtn");
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const analyzeLabel = document.getElementById("analyzeLabel");
+    const analyzeSpinner = document.getElementById("analyzeSpinner");
+    const statusStrip = document.getElementById("statusStrip");
+    const statusText = document.getElementById("statusText");
+    const errorBox = document.getElementById("errorBox");
+    const fileInfoContainer = document.getElementById("fileInfoContainer");
+    const fileNameEl = document.getElementById("fileName");
+    const fileSizeEl = document.getElementById("fileSize");
+
+    const resultCard = document.getElementById("resultCard");
+    const boatDetectedEl = document.getElementById("boatDetected");
+    const boatTypeEl = document.getElementById("boatType");
+    const crewSizeEl = document.getElementById("crewSize");
+    const viewpointEl = document.getElementById("viewpoint");
+    const flagsRow = document.getElementById("flagsRow");
+    const notesBlock = document.getElementById("notesBlock");
+    const notesText = document.getElementById("notesText");
+    const confidencePill = document.getElementById("confidencePill");
+    const confidenceValue = document.getElementById("confidenceValue");
+    const confidenceFill = document.getElementById("confidenceFill");
+
+    const jsonOutput = document.getElementById("jsonOutput");
+    const copyJsonBtn = document.getElementById("copyJsonBtn");
+    const mockBtn = document.getElementById("mockBtn");
+
+    let selectedFile = null;
+    let lastJson = null;
+
+    function formatBytes(bytes) {
+      if (!bytes && bytes !== 0) return "";
+      const units = ["B", "KB", "MB", "GB"];
+      let i = 0;
+      let num = bytes;
+      while (num >= 1024 && i < units.length - 1) {
+        num /= 1024;
+        i++;
+      }
+      return num.toFixed(num >= 10 ? 1 : 2) + " " + units[i];
+    }
+
+    function setStatus(message, isError = false) {
+      statusText.textContent = message;
+      const dot = statusStrip.querySelector(".status-dot");
+      if (isError) {
+        dot.classList.add("error");
+      } else {
+        dot.classList.remove("error");
+      }
+    }
+
+    function setError(message) {
+      if (!message) {
+        errorBox.style.display = "none";
+        errorBox.textContent = "";
+        return;
+      }
+      errorBox.style.display = "block";
+      errorBox.textContent = message;
+    }
+
+    function updateFileInfo(file) {
+      if (!file) {
+        fileInfoContainer.style.display = "none";
+        return;
+      }
+      fileNameEl.textContent = file.name;
+      fileSizeEl.textContent = "· " + formatBytes(file.size);
+      fileInfoContainer.style.display = "block";
+      analyzeBtn.disabled = false;
+      setStatus("Ready to analyze.");
+      setError("");
+    }
+
+    function handleFiles(files) {
+      if (!files || !files.length) return;
+      const file = files[0];
+      if (!file.type.startsWith("video/")) {
+        setError("Please choose a video file (mp4, mov, webm…).");
+        setStatus("Unsupported file type.", true);
+        selectedFile = null;
+        updateFileInfo(null);
+        analyzeBtn.disabled = true;
+        return;
+      }
+      selectedFile = file;
+      updateFileInfo(file);
+    }
+
+    // Drag & drop
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      if (e.dataTransfer.files && e.dataTransfer.files.length) {
+        handleFiles(e.dataTransfer.files);
+      }
+    });
+
+    // Browse button
+    browseBtn.addEventListener("click", () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", (e) => {
+      handleFiles(e.target.files);
+    });
+
+    function setLoading(isLoading) {
+      if (isLoading) {
+        analyzeBtn.disabled = true;
+        analyzeSpinner.style.display = "inline-block";
+        analyzeLabel.textContent = "Analyzing…";
+      } else {
+        analyzeSpinner.style.display = "none";
+        analyzeLabel.textContent = "Analyze";
+        analyzeBtn.disabled = !selectedFile;
+      }
+    }
+
+    function renderResult(json) {
+      lastJson = json;
+
+      // Safely extract expected fields, but stay flexible
+      const boatDetected = json.boat_detected ?? json.boatPresent ?? null;
+      const boatType = json.boat_type ?? json.boatType ?? null;
+      const crewSize = json.crew_size ?? json.crewSize ?? null;
+      const viewpoint = json.viewpoint ?? json.camera_viewpoint ?? null;
+      const confidence =
+        json.confidence ??
+        json.confidence_score ??
+        (typeof json.confidenceScore === "number" ? json.confidenceScore : null);
+      const flags =
+        json.flags && Array.isArray(json.flags)
+          ? json.flags
+          : json.flagsText
+          ? String(json.flagsText).split(/[;,]/).map((f) => f.trim())
+          : [];
+      const notes = json.notes ?? json.comment ?? json.summary ?? "";
+
+      boatDetectedEl.textContent =
+        boatDetected === true
+          ? "Yes"
+          : boatDetected === false
+          ? "No"
+          : boatDetected === null || boatDetected === undefined
+          ? "Unknown"
+          : String(boatDetected);
+
+      boatTypeEl.textContent = boatType ? String(boatType) : "Unclassified";
+      crewSizeEl.textContent =
+        typeof crewSize === "number" ? crewSize : crewSize ? String(crewSize) : "Unknown";
+      viewpointEl.textContent = viewpoint ? String(viewpoint) : "Unknown";
+
+      // Confidence
+      if (typeof confidence === "number" && !Number.isNaN(confidence)) {
+        const pct = Math.max(0, Math.min(confidence * (confidence <= 1 ? 100 : 1), 100));
+        confidenceValue.textContent = pct.toFixed(0) + "%";
+        confidenceFill.style.width = pct + "%";
+        confidencePill.style.display = "inline-flex";
+      } else {
+        confidencePill.style.display = "none";
+        confidenceFill.style.width = "0%";
+      }
+
+      // Flags
+      flagsRow.innerHTML = "";
+      if (flags && flags.length) {
+        flags.forEach((flag) => {
+          if (!flag) return;
+          const pill = document.createElement("span");
+          pill.className = "flag-pill";
+          pill.textContent = flag;
+          flagsRow.appendChild(pill);
+        });
+        flagsRow.style.display = "flex";
+      } else {
+        flagsRow.style.display = "none";
+      }
+
+      // Notes
+      if (notes && String(notes).trim().length) {
+        notesText.textContent = String(notes);
+        notesBlock.style.display = "block";
+      } else {
+        notesBlock.style.display = "none";
+      }
+
+      resultCard.style.display = "block";
+
+      // Raw JSON
+      const pretty = JSON.stringify(json, null, 2);
+      jsonOutput.textContent = pretty;
+
+      setStatus("Analysis complete.");
+      setError("");
+    }
+
+    // Analyze button click
+    analyzeBtn.addEventListener("click", async () => {
+      if (!selectedFile) {
+        setError("Please choose a video file first.");
+        setStatus("No video selected.", true);
+        return;
+      }
+
+      setLoading(true);
+      setStatus("Sending video to analyzer…");
+      setError("");
+
+      try {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Server returned ${res.status}: ${text || res.statusText}`);
+        }
+
+        const json = await res.json();
+        renderResult(json);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || "Analysis failed.");
+        setStatus("Error during analysis.", true);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // Copy JSON
+    copyJsonBtn.addEventListener("click", async () => {
+      if (!lastJson) return;
+      const text = JSON.stringify(lastJson, null, 2);
+      try {
+        await navigator.clipboard.writeText(text);
+        const old = copyJsonBtn.textContent;
+        copyJsonBtn.textContent = "Copied!";
+        setTimeout(() => {
+          copyJsonBtn.textContent = old;
+        }, 900);
+      } catch (err) {
+        console.error("Clipboard error:", err);
+      }
+    });
+
+    // Mock response (for local UI testing without backend)
+    mockBtn.addEventListener("click", () => {
+      const mockJson = {
+        boat_detected: true,
+        boat_type: "8+",
+        crew_size: 8,
+        viewpoint: "side-on",
+        confidence: 0.94,
+        flags: ["good angle", "full crew visible"],
+        notes:
+          "Clear side-on shot of an eight. All rowers visible for potential technique analysis in Phase 2.",
+        model_version: "row-analyzer-v0.1",
+        timestamp: new Date().toISOString(),
+      };
+      renderResult(mockJson);
+    });
+  </script>
+</body>
+</html>
