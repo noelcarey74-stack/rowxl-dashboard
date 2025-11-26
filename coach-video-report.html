@@ -2,133 +2,232 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>RowXL — Video Analysis Report</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RowXL — Coach Video Report (Coach Intelligence)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-:root{
-  --bg:#050b1a;--panel:#0c1633;--brand:#2f7cff;--text:#e8edff;--muted:#8fa2ff;--outline:#1e2f6b
+body {
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  background:radial-gradient(circle at top,#0b1530 0,#020617 55%,#000 100%);
+  color:#e5f0ff;
 }
-*{box-sizing:border-box}
-body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#14216b 0%,#0a1233 35%,#050b1a 70%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif}
-.wrap{max-width:1200px;margin:40px auto;padding:20px}
-.title{font-size:28px;font-weight:700;margin-bottom:6px}
-.sub{color:var(--muted);margin-bottom:18px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.card{background:linear-gradient(180deg,#0f1a3d,#0b1230);border:1px solid var(--outline);border-radius:14px;padding:14px}
-label{font-size:12px;color:var(--muted);display:block;margin-top:8px}
-input,select,textarea{width:100%;margin-top:4px;background:#070e25;border:1px solid var(--outline);color:var(--text);padding:10px;border-radius:10px}
-textarea{min-height:90px;resize:vertical}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn{background:linear-gradient(180deg,#3b82f6,#2563eb);border:none;color:white;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
-.btn.ghost{background:#0c1633;border:1px solid var(--outline)}
-.actions{display:flex;gap:10px;align-items:center;margin-top:12px}
-.output{min-height:360px;white-space:pre-wrap}
+.wrap { max-width:1200px; margin:40px auto; padding:20px }
+h1 { margin-bottom:5px }
+small { color:#9fb5d1 }
 
-/* Drag & Drop */
-.dropzone{position:relative;border:2px dashed var(--outline);border-radius:12px;padding:18px;margin-top:6px;text-align:center;background:#060c25;transition:all .15s}
-.dropzone.drag{background:#0b1440;border-color:#3b82f6}
-.dropzone input{position:absolute;inset:0;opacity:0;cursor:pointer}
-.small{font-size:12px;color:var(--muted)}
-.fileinfo{margin-top:8px;font-size:12px;color:#a9bbff}
-.preview{margin-top:10px}
-video{max-width:100%;border-radius:10px;border:1px solid var(--outline)}
+.panel {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  background:#0f172a;
+  border-radius:14px;
+  padding:16px;
+  border:1px solid #1e3a5f;
+}
+
+label { font-size:12px; color:#9fb5d1; display:block; margin-top:8px }
+input, select, textarea {
+  width:100%;
+  padding:8px;
+  border-radius:8px;
+  background:#020617;
+  border:1px solid #1e3a5f;
+  color:white;
+}
+textarea { min-height:120px }
+
+.dropzone {
+  margin-top:10px;
+  border:2px dashed #1e3a5f;
+  border-radius:10px;
+  padding:20px;
+  text-align:center;
+  color:#9fb5d1;
+}
+
+.btn {
+  background:linear-gradient(135deg,#0ea5e9,#2563eb);
+  border:none;
+  border-radius:999px;
+  color:white;
+  padding:10px 14px;
+  margin-top:10px;
+  cursor:pointer;
+}
+
+.output {
+  white-space:pre-wrap;
+  background:#020617;
+  border:1px solid #1e3a5f;
+  padding:12px;
+  border-radius:10px;
+  min-height:400px;
+}
+
+video {
+  margin-top:10px;
+  max-width:100%;
+  border-radius:10px;
+}
 </style>
 </head>
+
 <body>
+
 <div class="wrap">
-  <div class="title">RowXL — Video Analysis Report</div>
-  <div class="sub">Drop a video, add context and generate a coach-style technical report.</div>
+<h1>RowXL — Video Coach Intelligence</h1>
+<small>Coach reasoning engine + drill intelligence (no AI yet — coach brain active)</small>
 
-  <div class="grid">
-    <div class="card">
-      <div class="row">
-        <div>
-          <label>Athlete Name</label>
-          <input id="athlete" placeholder="e.g. Noel Carey" />
-        </div>
-        <div>
-          <label>Boat Class</label>
-          <select id="boat"><option>1x</option><option>2x</option><option>2-</option><option>4x</option><option>4-</option><option>8+</option></select>
-        </div>
-      </div>
+<div class="panel">
+<div>
 
-      <div class="row">
-        <div>
-          <label>Side / Position</label>
-          <input id="side" placeholder="Stroke / Bow / Seat position" />
-        </div>
-        <div>
-          <label>Session Type</label>
-          <input id="session" placeholder="Training / Race / Test / Technical" />
-        </div>
-      </div>
+<label>Athlete Name</label>
+<input id="athlete" placeholder="Name" />
 
-      <label>Conditions</label>
-      <input id="conditions" placeholder="Flat / windy / chop / river / lane" />
+<label>Boat Class</label>
+<select id="boat">
+<option>1x</option><option>2x</option><option>2-</option>
+<option>4x</option><option>4+</option><option>4-</option>
+<option>8+</option>
+</select>
 
-      <label>Camera Angle</label>
-      <select id="angle"><option>Side-on</option><option>Front-on</option><option>Rear</option><option>Drone</option><option>Oblique</option></select>
+<label>Seat</label>
+<input id="seat" placeholder="Stroke / Bow / Seat" />
 
-      <label>Upload Video</label>
-      <div id="dropzone" class="dropzone">
-        <div><strong>Drop your video here</strong> or click to select</div>
-        <div class="small">MP4, MOV, AVI supported</div>
-        <input id="videoInput" type="file" accept="video/*" />
-      </div>
-      <div id="fileinfo" class="fileinfo"></div>
-      <div id="preview" class="preview"></div>
+<label>Session Type</label>
+<input id="session" placeholder="Training / Race / Test" />
 
-      <label>Coach Notes (optional)</label>
-      <textarea id="notes" placeholder="What should the AI look for? Weak finish, catch timing, steering, race rehearsal…"></textarea>
+<label>Conditions</label>
+<input id="cond" placeholder="Wind, chop, flat..." />
 
-      <div class="actions">
-        <button class="btn" onclick="generate()">Generate Coach Report</button>
-        <button class="btn ghost" onclick="copyReport()">Copy</button>
-        <button class="btn ghost" onclick="clearAll()">Clear</button>
-      </div>
-      <div class="small">Video stays local — nothing is uploaded.</div>
-    </div>
+<label>Camera Angle</label>
+<select id="cam">
+<option>Side-on</option>
+<option>Bow</option>
+<option>Stern</option>
+<option>Quarter</option>
+</select>
 
-    <div class="card">
-      <label>Generated Report</label>
-      <div id="report" class="output">Report will appear here…</div>
-    </div>
-  </div>
+<div id="dropArea" class="dropzone">Drop video here or click</div>
+<input type="file" id="file" hidden accept="video/*"/>
+
+<video id="preview" controls hidden></video>
+
+<label>Coach Notes (this now drives the report)</label>
+<textarea id="notes" placeholder="Write exactly what you see — faults, comments, instincts..."></textarea>
+
+<button class="btn" onclick="generate()">Generate Coach Report</button>
+
+</div>
+
+<div>
+<div class="output" id="out">Report will appear here...</div>
+</div>
+
+</div>
 </div>
 
 <script>
-const dz = document.getElementById('dropzone');
-const input = document.getElementById('videoInput');
-const info = document.getElementById('fileinfo');
-const preview = document.getElementById('preview');
+const drop = document.getElementById("dropArea");
+const fileInput = document.getElementById("file");
+const video = document.getElementById("preview");
 
-['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('drag')}));
-['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('drag')}));
+drop.onclick = ()=>fileInput.click();
 
-dz.addEventListener('drop', e => { if(e.dataTransfer.files.length){ input.files = e.dataTransfer.files; showFile(); }});
-input.addEventListener('change', showFile);
+drop.ondragover = e => { e.preventDefault(); drop.style.borderColor="#38bdf8"; };
+drop.ondragleave = ()=> drop.style.borderColor="#1e3a5f";
+drop.ondrop = e=>{
+  e.preventDefault();
+  fileInput.files = e.dataTransfer.files;
+  loadVideo();
+};
 
-function showFile(){
-  const f = input.files[0];
+fileInput.onchange = loadVideo;
+
+function loadVideo(){
+  const f = fileInput.files[0];
   if(!f) return;
-  info.textContent = `Selected: ${f.name} (${(f.size/1024/1024).toFixed(2)} MB)`;
-  const url = URL.createObjectURL(f);
-  preview.innerHTML = `<video controls src="${url}"></video>`;
+  video.src = URL.createObjectURL(f);
+  video.hidden = false;
+  drop.innerHTML = "Loaded: " + f.name;
 }
 
 function generate(){
-  const athlete = val('athlete'), boat = val('boat'), side = val('side'), session = val('session');
-  const cond = val('conditions'), ang = val('angle'), notes = val('notes');
-  const f = input.files[0]?.name || 'No file attached';
+  const name = athlete.value || "Athlete";
+  const boat = document.getElementById("boat").value;
+  const seat = seatInput = document.getElementById("seat").value || "—";
+  const cond = document.getElementById("cond").value || "Not specified";
+  const cam  = document.getElementById("cam").value;
+  const notes = document.getElementById("notes").value.toLowerCase();
 
-  const text = `ROWXL VIDEO ANALYSIS REPORT\n\nAthlete: ${athlete}\nBoat: ${boat}\nSeat: ${side}\nSession: ${session}\nConditions: ${cond}\nCamera: ${ang}\nVideo: ${f}\n\nKEY FINDINGS:\n• Catch timing and blade control observations\n• Body sequencing and posture\n• Finish control and handle path\n\nPRIORITY FIXES:\n1. Improve blade entry consistency\n2. Reduce early layback\n3. Stabilise hands through finish\n\nCOACH NOTES:\n${notes || 'None provided'}\n\nOVERALL IMPRESSION:\nTechnical efficiency is improving; next focus is repeatability under rate and fatigue.`;
+  let findings=[], drills=[], cues=[];
 
-  document.getElementById('report').textContent = text;
+  if(notes.includes("early arm") || notes.includes("bending")){
+    findings.push("Early arm engagement breaking leg drive sequence");
+    drills.push("Pause rowing (legs down)", "Reverse pick drill", "Arms-away only pauses");
+    cues.push("Arms last", "Hang before pull");
+  }
+
+  if(notes.includes("rush") || notes.includes("fast")){
+    findings.push("Slide rushing and loss of control on recovery");
+    drills.push("Rate capped paddling", "Feet-out rowing");
+    cues.push("Slow up", "Control the slide");
+  }
+
+  if(notes.includes("catch")){
+    findings.push("Inconsistent front-end placement and timing");
+    drills.push("Square blade rowing", "Roll-ups", "Catch placement drill");
+    cues.push("Place then push", "Front first");
+  }
+
+  if(notes.includes("finish")){
+    findings.push("Unstable handle path and release");
+    drills.push("Tap-down drill", "Finish holds");
+    cues.push("Flat hands away", "Clean tap");
+  }
+
+  if(findings.length === 0){
+    findings.push("General technical inefficiency observed under load");
+    drills.push("Pause rowing", "Square blade paddling");
+    cues.push("Length first", "Relaxed power");
+  }
+
+  let text = `ROWXL COACH REPORT
+
+Athlete: ${name}
+Boat: ${boat}
+Seat: ${seat}
+Conditions: ${cond}
+Camera: ${cam}
+
+KEY FINDINGS:
+${findings.map(f=>"• "+f).join("\n")}
+
+PRIORITY FIXES:
+1. ${findings[0]}
+2. Technical consistency under fatigue
+3. Blade control at the front end
+
+DRILLS PRESCRIBED:
+${drills.map(d=>"• "+d).join("\n")}
+
+COACHING CUES:
+${cues.map(c=>"• "+c).join("\n")}
+
+SESSION STRUCTURE SUGGESTION:
+• Warm-up: pause rowing + square blades
+• Main work: low rate control focus
+• Cool-down: technical steady paddle
+
+OVERALL IMPRESSION:
+The crew shows a workable technical platform but consistency drops under load and rate. Emphasis now should shift to control, repeatability and blade discipline.
+
+SIGNED: Noel Carey — Coach & Analyst
+`;
+
+  out.textContent = text;
 }
-
-function val(id){return document.getElementById(id).value || '-'}
-function copyReport(){navigator.clipboard.writeText(document.getElementById('report').textContent)}
-function clearAll(){document.querySelectorAll('input,textarea,select').forEach(e=>e.value='');input.value='';info.textContent='';preview.innerHTML='';document.getElementById('report').textContent='Report will appear here…'}
 </script>
+
 </body>
 </html>
