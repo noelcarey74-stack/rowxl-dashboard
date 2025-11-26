@@ -459,7 +459,7 @@
       const weekly = program.weekly_schedule || {};
       const focus  = program.focus || "Aerobic base and technical consistency";
       const intensity = program.intensity_percent ?? 75;
-      const notes = String(program.notes || "").trim();
+      const notesRaw = String(program.notes || "").trim();
 
       const weeklyLine = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
         .map(d => `${d}: ${weekly[d] || "Rest"}`)
@@ -475,20 +475,77 @@
         `• Weekly pattern: ${weeklyLine}.`
       ];
 
-      // If notes mention tests or races, add a short contextual line
-      const lower = notes.toLowerCase();
-      if (notes) {
-        if (lower.includes("1k") || lower.includes("2k") || lower.includes("5k") || lower.includes("test")) {
+      // ---- Intelligent handling of notes ----
+      if (notesRaw){
+        const notes = notesRaw;
+        const lower = notes.toLowerCase();
+
+        // Helper to avoid dumping a huge paragraph into one bullet
+        const shortNote = notes.length > 160 ? notes.slice(0,157) + "…" : notes;
+
+        const hasTest =
+          lower.includes("1k") || lower.includes("2k") || lower.includes("5k") ||
+          lower.includes("test") || lower.includes("time trial") || lower.includes("tt");
+
+        const hasRace =
+          lower.includes("regatta") || lower.includes("head") || lower.includes("horr") ||
+          lower.includes("race") || lower.includes("championship") ||
+          lower.includes("wrmr") || lower.includes("worlds") ||
+          lower.includes("henley") || lower.includes("irish champs");
+
+        const hasInjury =
+          lower.includes("injury") || lower.includes("injured") ||
+          lower.includes("back") || lower.includes("shoulder") ||
+          lower.includes("knee") || lower.includes("hip") ||
+          lower.includes("rib") || lower.includes("ribs") ||
+          lower.includes("wrist") || lower.includes("elbow") ||
+          lower.includes("neck") || lower.includes("tendon") ||
+          lower.includes("strain") || lower.includes("sprain") ||
+          lower.includes("tear") || lower.includes("pulled") ||
+          lower.includes("surgery") || lower.includes("operation") ||
+          lower.includes("ill") || lower.includes("sick") ||
+          lower.includes("flu") || lower.includes("covid");
+
+        const hasScheduleIssue =
+          lower.includes("holiday") || lower.includes("vacation") ||
+          lower.includes("travel") || lower.includes("away") ||
+          lower.includes("work") || lower.includes("shift") ||
+          lower.includes("on call") || lower.includes("busy") ||
+          lower.includes("kids") || lower.includes("children") ||
+          lower.includes("school") || lower.includes("exam") ||
+          lower.includes("exams") || lower.includes("wedding");
+
+        if (hasTest){
           summaryLines.push(
-            `• Athlete note: A performance test is planned around the end of this block (“${notes}”). ` +
-            `This program is designed to support that by building aerobic and threshold fitness.`
+            `• Athlete note (test): ${shortNote}`,
+            `• Coach attention: A performance test is planned near the end of this block. Use the hard erg and water sessions to rehearse pacing and race rhythm.`
           );
-        } else if (lower.includes("regatta") || lower.includes("race") || lower.includes("head") || lower.includes("championship")) {
+        }
+
+        if (hasRace){
           summaryLines.push(
-            `• Athlete note: Upcoming racing mentioned (“${notes}”). Use the final few sessions to focus on good execution and recovery.`
+            `• Athlete note (race/regatta): ${shortNote}`,
+            `• Coach attention: Upcoming racing is mentioned. In the final few sessions, prioritise good execution, rest and confidence over adding extra volume.`
           );
-        } else {
-          summaryLines.push(`• Athlete note: ${notes}`);
+        }
+
+        if (hasInjury){
+          summaryLines.push(
+            `• Athlete note (injury/illness): ${shortNote}`,
+            `• Coach attention: Possible injury or illness flagged. Consider reducing load, extending warm-ups and monitoring symptoms closely.`
+          );
+        }
+
+        if (hasScheduleIssue){
+          summaryLines.push(
+            `• Athlete note (schedule): ${shortNote}`,
+            `• Coach attention: There may be constraints on training time in this block. Be flexible with session order and protect the key quality days.`
+          );
+        }
+
+        // If none of the patterns matched, just show the note plainly
+        if (!hasTest && !hasRace && !hasInjury && !hasScheduleIssue){
+          summaryLines.push(`• Athlete note: ${shortNote}`);
         }
       }
 
