@@ -6,110 +6,133 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --bg:#0a1a2f; --panel:#0f2747; --panel2:#113057; --text:#e9f0fb;
-      --muted:#9fb5d1; --outline:#1e3a5f; --brand:#0e3a73;
+      --bg:#020617;
+      --panel:#0f172a;
+      --panel2:#020617;
+      --text:#e5f0ff;
+      --muted:#9fb5d1;
+      --outline:#1e3a5f;
+      --brand:#0e3a73;
     }
     *{ box-sizing:border-box }
     body{
       margin:0;
-      background:var(--bg);
+      background:radial-gradient(circle at top,#0b1530 0,#020617 55%,#000 100%);
       color:var(--text);
       font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
     }
     .wrap{ max-width:1100px; margin:40px auto; padding:0 20px }
-    h1{ margin:0 0 18px; font-size:26px }
+    h1{ margin:0 0 10px; font-size:28px }
 
     .panel{
       background:var(--panel);
       border:1px solid var(--outline);
-      border-radius:10px;
+      border-radius:14px;
       padding:16px;
     }
 
-    label{ font-size:12px; color:var(--muted); margin-bottom:4px; display:block }
+    .layout{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:16px;
+    }
 
-    textarea,input,button{
+    @media (max-width:900px){
+      .layout{ grid-template-columns:1fr }
+    }
+
+    label{ font-size:12px; color:var(--muted); margin:0 0 4px; display:block }
+
+    textarea{
+      width:100%;
+      min-height:360px;
+      resize:vertical;
       background:var(--panel2);
       color:var(--text);
       border:1px solid var(--outline);
-      border-radius:8px;
-      padding:8px 10px;
+      border-radius:10px;
+      padding:10px;
+      font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       outline:none;
-      font-family:inherit;
     }
-    textarea::placeholder,input::placeholder{ color:#7fa1cc }
-    textarea{
-      width:100%;
-      min-height:260px;
-      resize:vertical;
-      font-family:Menlo,Consolas,monospace;
+    textarea::placeholder{ color:#64748b }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid var(--outline);
+      background:rgba(15,23,42,.9);
+      color:var(--text);
       font-size:13px;
-      white-space:pre;
-      overflow:auto;
-    }
-    button{
       cursor:pointer;
-      border-radius:8px;
-      margin-right:6px;
-      margin-top:6px;
-      font-size:13px;
+      text-decoration:none;
     }
-    .btn-primary{ background:var(--brand); border-color:#205b9a }
-    .btn-ghost{ background:transparent }
-    .tiny{ font-size:12px; color:var(--muted); }
+    .btn.primary{
+      background:linear-gradient(135deg,#0ea5e9,#2563eb);
+      border-color:#2563eb;
+      color:#e5f0ff;
+    }
+    .btn.ghost{ background:transparent; opacity:.9 }
+    .btn:disabled{ opacity:.6; cursor:default }
 
-    .cols{
+    .controls-row{
       display:flex;
-      gap:14px;
       flex-wrap:wrap;
-    }
-    .col{
-      flex:1 1 320px;
-      min-width:0;
+      gap:8px;
+      margin-top:10px;
     }
 
+    .tiny{ font-size:12px; color:var(--muted); margin-top:8px }
     .toast{
       position:fixed;
       right:14px;
       bottom:14px;
-      background:#113057;
+      background:#0f172a;
       border:1px solid var(--outline);
-      padding:8px 10px;
-      border-radius:10px;
+      padding:8px 12px;
+      border-radius:999px;
       font-size:13px;
       display:none;
-      z-index:20;
+      z-index:50;
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>RowXL — Program Text Generator</h1>
-    <p class="tiny">
-      Paste your program JSON on the left and click <strong>Generate diary</strong>.  
-      The right side will give you a full day-by-day training diary you can copy anywhere.
-    </p>
+    <div class="tiny">
+      Paste the JSON you receive from the Program Builder on the left, then click
+      <strong>Generate diary</strong>. A full day-by-day training diary will appear on the right for you to copy.
+    </div>
 
-    <div class="panel">
-      <div class="cols">
-        <!-- JSON INPUT -->
-        <div class="col">
-          <label for="programJson">Program JSON</label>
-          <textarea id="programJson" spellcheck="false" placeholder="Paste your JSON here..."></textarea>
-          <button class="btn-ghost" id="loadSampleBtn">Load sample JSON</button>
-          <button class="btn-primary" id="generateBtn">Generate diary</button>
+    <div class="panel" style="margin-top:18px">
+      <div class="layout">
+        <!-- LEFT: JSON INPUT -->
+        <div>
+          <label for="inputJson">Program JSON</label>
+          <textarea id="inputJson" spellcheck="false" placeholder='Paste JSON from Program Builder here...'></textarea>
+          <div class="controls-row">
+            <button id="loadSampleBtn" class="btn ghost" type="button">Load sample JSON</button>
+            <button id="generateBtn" class="btn primary" type="button">Generate diary</button>
+          </div>
         </div>
 
-        <!-- OUTPUT -->
-        <div class="col">
-          <label for="programOutput">Generated Training Diary (copy &amp; paste)</label>
-          <textarea id="programOutput" readonly placeholder="Your program diary will appear here..."></textarea>
-          <button class="btn-ghost" id="copyBtn">Copy diary</button>
-          <button class="btn-ghost" id="clearBtn">Clear</button>
-          <p class="tiny">
+        <!-- RIGHT: DIARY OUTPUT -->
+        <div>
+          <label for="outputDiary">Generated Training Diary (copy &amp; paste)</label>
+          <textarea id="outputDiary" spellcheck="false" placeholder="Your program diary will appear here..."></textarea>
+          <div class="controls-row">
+            <button id="copyDiaryBtn" class="btn ghost" type="button">Copy diary</button>
+            <button id="clearBtn" class="btn ghost" type="button">Clear</button>
+          </div>
+          <div class="tiny">
             Every day will include: Warm-up, Main Set, Stroke Rate/HR zone (where relevant),
             Technical Focus, Notes, and an Athlete Notes section.
-          </p>
+          </div>
         </div>
       </div>
     </div>
@@ -118,285 +141,399 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const $ = s => document.querySelector(s);
+    const toast = (msg, ok=true)=>{
+      const t = $("#toast");
+      t.textContent = msg;
+      t.style.display = "block";
+      t.style.borderColor = ok ? "#16a34a" : "#b91c1c";
+      clearTimeout(t._h);
+      t._h = setTimeout(()=>{ t.style.display="none"; }, 2600);
+    };
 
-    const SAMPLE_JSON = `{
-  "athlete": {
-    "name": "Jane Doe",
-    "gender": "Female",
-    "category": "Masters"
-  },
-  "program": {
-    "start_date": "2025-11-26",
-    "end_date": "2025-12-26",
-    "intensity_percent": 75,
-    "focus": "Aerobic base and technical consistency",
-    "weekly_schedule": {
-      "Mon": "Erg (UT2)",
-      "Tue": "Weights",
-      "Wed": "Rest",
-      "Thu": "Water Row",
-      "Fri": "Water Row",
-      "Sat": "Weights",
-      "Sun": "Rest"
+    // ---- SAMPLE JSON (matches what your Program Builder sends) ----
+    const SAMPLE = JSON.stringify({
+      "notes": "I’m doing a 1k test at the end of the program",
+      "gender": "Male",
+      "category": "Masters",
+      "start_date": "2025-11-26",
+      "finish_date": "2025-12-01",
+      "athlete_name": "Noel Carey",
+      "athlete_email": "noelcarey74@yahoo.ie",
+      "weekly_schedule": {
+        "Fri": "Water Row",
+        "Mon": "Erg (UT2)",
+        "Sat": "Weights",
+        "Sun": "Erg (UT1/AT)",
+        "Thu": "Water Row",
+        "Tue": "Weights",
+        "Wed": "Rest"
+      },
+      "intensity_percent": 75
+    }, null, 2);
+
+    $("#loadSampleBtn").addEventListener("click", ()=>{
+      $("#inputJson").value = SAMPLE;
+      toast("Sample JSON loaded");
+    });
+
+    $("#clearBtn").addEventListener("click", ()=>{
+      $("#inputJson").value = "";
+      $("#outputDiary").value = "";
+    });
+
+    $("#copyDiaryBtn").addEventListener("click", async ()=>{
+      const text = $("#outputDiary").value;
+      if (!text.trim()) { toast("Nothing to copy", false); return; }
+      try{
+        await navigator.clipboard.writeText(text);
+        toast("Diary copied ✔");
+      }catch(e){
+        toast("Copy failed", false);
+      }
+    });
+
+    // ---------- JSON NORMALISATION ----------
+    function normalisePayload(raw){
+      // Athlete block
+      const athlete = raw.athlete ? {...raw.athlete} : {};
+      if (!athlete.name && raw.athlete_name) athlete.name = raw.athlete_name;
+      if (!athlete.email && raw.athlete_email) athlete.email = raw.athlete_email;
+      if (!athlete.gender && raw.gender) athlete.gender = raw.gender;
+      if (!athlete.category && raw.category) athlete.category = raw.category;
+
+      // Program block (accept both nested + flat fields)
+      const program = raw.program ? {...raw.program} : {};
+      if (!program.start_date && raw.start_date) program.start_date = raw.start_date;
+      if (!program.end_date && (raw.finish_date || raw.end_date)) {
+        program.end_date = raw.finish_date || raw.end_date;
+      }
+      if (program.intensity_percent == null && raw.intensity_percent != null) {
+        program.intensity_percent = raw.intensity_percent;
+      }
+      if (!program.weekly_schedule && raw.weekly_schedule) {
+        program.weekly_schedule = raw.weekly_schedule;
+      }
+      if (!program.focus && raw.focus) program.focus = raw.focus;
+      if (!program.notes && raw.notes) program.notes = raw.notes;
+
+      const title = raw.title ||
+        `${athlete.category || "Masters"} ${athlete.gender ? "– " + athlete.gender : ""} Training Diary`.trim();
+      const quote = raw.quote || "Consistency builds champions.";
+
+      return { title, athlete, program, quote };
     }
-  }
-}`;
 
-    const $ = id => document.getElementById(id);
-    const toastEl = $("toast");
-    function showToast(msg){
-      toastEl.textContent = msg;
-      toastEl.style.display = "block";
-      clearTimeout(showToast._h);
-      showToast._h = setTimeout(()=>toastEl.style.display="none",2000);
+    function parseISODate(str){
+      const [y,m,d] = String(str).split("-").map(x=>parseInt(x,10));
+      if (!y || !m || !d) return null;
+      return new Date(y, m-1, d);
     }
 
-    function formatLongDate(d){
-      return d.toLocaleDateString(undefined,{
+    function formatDateLong(d){
+      return d.toLocaleDateString("en-GB", {
         weekday:"long",
-        year:"numeric",
+        day:"numeric",
         month:"long",
-        day:"numeric"
+        year:"numeric"
       });
     }
 
-    function buildSessionBlock(date, type, cfg){
-      const titleDate = formatLongDate(date);
-      const intensity = cfg.program.intensity_percent ?? 75;
-
-      let out = `🗓️ ${titleDate} — ${type}\n\n`;
-
-      const lower = type.toLowerCase();
-
-      if (lower.includes("rest")) {
-        out +=
-`Warm-up:
-None planned.
-
-Main Set:
-Rest day.
-
-Focus:
-Recovery, sleep and general mobility.
-
-Notes:
-Light walking or gentle stretching is encouraged, but no structured training is required.
-
-Athlete Notes:
-_________________________________________________
-
-`;
-        return out;
-      }
-
-      if (lower.includes("erg")) {
-        out +=
-`Warm-up:
-10 minutes very easy rowing, gradually building from light paddling to a steady UT2 rhythm.
-
-Main Set:
-2 × 40 minutes continuous UT2 rowing.
-Stroke Rate: 18–20 spm
-Heart Rate: 60–70% HR max (easy conversational effort).
-Rest: 3 minutes very light paddling between pieces.
-
-Technical Focus:
-• Long, relaxed stroke with quiet shoulders.
-• Strong connection through the legs before the body and arms.
-• Smooth, unhurried recovery with balanced posture on the slide.
-
-Focus:
-Aerobic conditioning and rhythm at approximately ${intensity}% effort, without chasing split.
-
-Notes:
-You should always feel that you could continue another 10–15 minutes at the end of each piece.
-
-Athlete Notes:
-_________________________________________________
-
-`;
-        return out;
-      }
-
-      if (lower.includes("weight")) {
-        out +=
-`Warm-up:
-5–8 minutes light cardio (row, cycle or treadmill) plus dynamic mobility for hips, hamstrings, shoulders and back.
-
-Main Set:
-Block A
-• Goblet Squat – 3 × 10
-• Romanian Deadlift – 3 × 8
-
-Block B
-• Lat Pulldown or Assisted Pull-down – 3 × 10
-• Dumbbell Bench Press – 3 × 8
-
-Block C
-• Seated or Cable Row – 3 × 10
-• Front Plank – 3 × 30–40 seconds
-
-Rest:
-60–90 seconds between working sets.
-
-Technical Focus:
-• Neutral spine at all times (no rounding).
-• Drive from the legs and hips rather than the lower back.
-• Smooth, controlled lowering phase; strong but not jerky on the way up.
-
-Focus:
-Maintain rowing-specific strength and robustness without creating heavy fatigue.
-
-Notes:
-Choose loads that feel “comfortably hard” on the last 2 reps but always leave 1–2 good reps in reserve.
-
-Athlete Notes:
-_________________________________________________
-
-`;
-        return out;
-      }
-
-      if (lower.includes("water")) {
-        out +=
-`Warm-up:
-10–15 minutes light paddling, building gradually from very easy to steady rowing.
-Include 3 × 10 stroke builds up to 22–24 spm with plenty of paddling between.
-
-Main Set:
-Option A – continuous:
-• 40–50 minutes steady rowing.
-
-Option B – broken:
-• 2 × 20–25 minutes with 3 minutes light paddling between pieces.
-Stroke Rate: 18–22 spm
-Heart Rate: UT2 to light UT1 (roughly 60–75% HR max).
-
-Technical Focus:
-• Clean, quiet catches with the blade fully loaded before the drive.
-• Strong leg drive while the upper body stays relaxed and supported.
-• Level hands at the finish and tidy, consistent tap-down.
-
-Focus:
-Boat run, timing and aerobic efficiency with no rush on the slide.
-
-Notes:
-If conditions are poor, shorten the main set slightly but keep it controlled and safe. Prioritise timing and balance over power.
-
-Athlete Notes:
-_________________________________________________
-
-`;
-        return out;
-      }
-
-      // generic fallback (if type is something unusual)
-      out +=
-`Warm-up:
-10 minutes easy movement suitable for this session.
-
-Main Set:
-Work as appropriate for: ${type}.
-
-Focus:
-Controlled, smooth effort at roughly ${intensity}% intensity.
-
-Notes:
-Move well, avoid rushing, and prioritise good mechanics over intensity.
-
-Athlete Notes:
-_________________________________________________
-
-`;
-      return out;
+    function formatDateShort(d){
+      return d.toISOString().slice(0,10);
     }
 
-    function buildDiary(cfg){
-      if (!cfg.program || !cfg.program.start_date || !cfg.program.end_date) {
-        throw new Error("program.start_date and program.end_date are required.");
-      }
-      const start = new Date(cfg.program.start_date + "T00:00:00");
-      const end   = new Date(cfg.program.end_date   + "T00:00:00");
-      if (isNaN(start) || isNaN(end)) throw new Error("Dates must be valid YYYY-MM-DD values.");
-      if (end < start) throw new Error("end_date must be on or after start_date.");
+    const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-      const sched = cfg.program.weekly_schedule || {};
-      const intensity = cfg.program.intensity_percent ?? 75;
-      const focus = cfg.program.focus || "Aerobic base and strength maintenance";
-      const athlete = cfg.athlete || {};
+    // ---------- DIARY GENERATION ----------
+    function buildIntro(meta){
+      const { title, athlete, program, quote } = meta;
+      const start = program.start_date;
+      const end   = program.end_date;
+      const cat   = athlete.category || "Masters";
+      const gender = athlete.gender || "";
+      const intensity = program.intensity_percent ?? 75;
+      const focus = program.focus || "Aerobic base and technical consistency";
 
-      // Header
-      let out = "";
-      const headerMonth = start.toLocaleDateString(undefined,{month:"long",year:"numeric"});
-      out += `Masters ${athlete.gender || "Athlete"} – ${headerMonth} Training Diary\n`;
-      out += `Dates: ${cfg.program.start_date} → ${cfg.program.end_date}\n`;
-      out += `Category: ${athlete.category || "Masters"}\n`;
-      out += `Intensity Level: ~${intensity}%\n`;
-      out += `Primary Focus: ${focus}\n\n`;
-      out += `Weekly Structure:\n`;
-      out += `Mon ${sched.Mon || "—"}\n`;
-      out += `Tue ${sched.Tue || "—"}\n`;
-      out += `Wed ${sched.Wed || "—"}\n`;
-      out += `Thu ${sched.Thu || "—"}\n`;
-      out += `Fri ${sched.Fri || "—"}\n`;
-      out += `Sat ${sched.Sat || "—"}\n`;
-      out += `Sun ${sched.Sun || "—"}\n\n`;
-      out += `Quote:\n“Consistency builds champions.”\n\n`;
-      out += `------------------------------------------------------------\n\n`;
+      const weekly = program.weekly_schedule || {};
+      const weeklyLines = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(
+        d=>`${d} ${weekly[d] || "Rest"}`
+      );
 
-      // Day-by-day
-      const d = new Date(start);
-      while (d <= end) {
-        const key = DAY_NAMES[d.getDay()];
-        const type = sched[key] || "Rest";
-        out += buildSessionBlock(d, type, cfg);
-        out += "------------------------------------------------------------\n\n";
-        d.setDate(d.getDate() + 1);
-      }
-      return out.trim();
+      return [
+        `${title}`,
+        `Dates: ${start} → ${end}`,
+        `Category: ${cat}${gender ? " ("+gender+")" : ""}`,
+        `Intensity Level: ~${intensity}%`,
+        `Primary Focus: ${focus}`,
+        ``,
+        `Weekly Structure:`,
+        ...weeklyLines,
+        ``,
+        `Quote:`,
+        `“${quote}”`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
     }
 
-    // Wire buttons
-    $("loadSampleBtn").addEventListener("click", () => {
-      $("programJson").value = SAMPLE_JSON;
-      showToast("Sample JSON loaded");
-    });
+    function templateRest(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `None planned.`,
+        ``,
+        `Main Set:`,
+        `Rest day.`,
+        ``,
+        `Focus:`,
+        `Recovery, sleep and general mobility.`,
+        ``,
+        `Notes:`,
+        `Light walking or gentle stretching is encouraged, but no structured training is required.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
 
-    $("generateBtn").addEventListener("click", () => {
-      const raw = $("programJson").value.trim();
-      if (!raw) { showToast("Paste your JSON first."); return; }
-      let cfg;
-      try {
-        cfg = JSON.parse(raw);
-      } catch (e) {
-        showToast("JSON is not valid. Check commas and quotes.");
+    function templateWaterRow(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `10–15 minutes light paddling, building gradually from very easy to steady rowing.`,
+        `Include 3 × 10 stroke builds up to 22–24 spm with plenty of paddling between.`,
+        ``,
+        `Main Set:`,
+        `Option A – continuous:`,
+        `• 40–50 minutes steady rowing.`,
+        ``,
+        `Option B – broken:`,
+        `• 2 × 20–25 minutes with 3 minutes light paddling between pieces.`,
+        `Stroke Rate: 18–22 spm`,
+        `Heart Rate: UT2 to light UT1 (roughly 60–75% HR max).`,
+        ``,
+        `Technical Focus:`,
+        `• Clean, quiet catches with the blade fully loaded before the drive.`,
+        `• Strong leg drive while the upper body stays relaxed and supported.`,
+        `• Level hands at the finish and tidy, consistent tap-down.`,
+        ``,
+        `Focus:`,
+        `Boat run, timing and aerobic efficiency with no rush on the slide.`,
+        ``,
+        `Notes:`,
+        `If conditions are poor, shorten the main set slightly but keep it controlled and safe. Prioritise timing and balance over power.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateWeights(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `5–8 minutes light cardio (row, cycle or treadmill) plus dynamic mobility for hips, hamstrings, shoulders and back.`,
+        ``,
+        `Main Set:`,
+        `Block A`,
+        `• Goblet Squat – 3 × 10`,
+        `• Romanian Deadlift – 3 × 8`,
+        ``,
+        `Block B`,
+        `• Lat Pulldown or Assisted Pull-down – 3 × 10`,
+        `• Dumbbell Bench Press – 3 × 8`,
+        ``,
+        `Block C`,
+        `• Seated or Cable Row – 3 × 10`,
+        `• Front Plank – 3 × 30–40 seconds`,
+        ``,
+        `Rest:`,
+        `60–90 seconds between working sets.`,
+        ``,
+        `Technical Focus:`,
+        `• Neutral spine at all times (no rounding).`,
+        `• Drive from the legs and hips rather than the lower back.`,
+        `• Smooth, controlled lowering phase; strong but not jerky on the way up.`,
+        ``,
+        `Focus:`,
+        `Maintain rowing-specific strength and robustness without creating heavy fatigue.`,
+        ``,
+        `Notes:`,
+        `Choose loads that feel “comfortably hard” on the last 2 reps but always leave 1–2 good reps in reserve.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateErgUT2(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `10 minutes very easy rowing, gradually building from light paddling to a steady UT2 rhythm.`,
+        ``,
+        `Main Set:`,
+        `2 × 40 minutes continuous UT2 rowing.`,
+        `Stroke Rate: 18–20 spm`,
+        `Heart Rate: 60–70% HR max (easy conversational effort).`,
+        `Rest: 3 minutes very light paddling between pieces.`,
+        ``,
+        `Technical Focus:`,
+        `• Long, relaxed stroke with quiet shoulders.`,
+        `• Strong connection through the legs before the body and arms.`,
+        `• Smooth, unhurried recovery with balanced posture on the slide.`,
+        ``,
+        `Focus:`,
+        `Aerobic conditioning and rhythm at approximately 75% effort, without chasing split.`,
+        ``,
+        `Notes:`,
+        `You should always feel that you could continue another 10–15 minutes at the end of each piece.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateErgUT1AT(label, hasTest){
+      const mainLines = hasTest ? [
+        `Main Set:`,
+        `1) Warm-up build:`,
+        `• 10 minutes UT2 at 18–20 spm.`,
+        `• 3 × 30 seconds at 1k pace with 90 seconds light paddling between.`,
+        ``,
+        `2) 1k Test Piece:`,
+        `• 1,000 m at best sustainable race effort.`,
+        `Stroke Rate: 30–34 spm.`,
+        `Pacing: aim for a strong but controlled first 500 m, then push in the final 300–200 m.`,
+        ``,
+        `3) Cool-down:`,
+        `• 10–15 minutes light UT2 paddling at 18–20 spm.`,
+      ] : [
+        `Main Set:`,
+        `3 × 8–10 minutes at UT1 / AT (comfortably hard).`,
+        `Stroke Rate: 22–26 spm.`,
+        `Rest: 3–4 minutes very light paddling between pieces.`
+      ];
+
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `10 minutes light rowing, gradually building from UT2 into the lower end of UT1 (20–22 spm).`,
+        ``,
+        ...mainLines,
+        ``,
+        `Technical Focus:`,
+        `• Powerful but relaxed leg drive; stay tall through the trunk.`,
+        `• Keep the handle speed smooth into and away from the body.`,
+        `• No rushing on the slide, even when the rate is high.`,
+        ``,
+        `Focus:`,
+        hasTest
+          ? `Use this as a performance marker. Stay composed in the first half of the 1k and finish with intent.`
+          : `Build threshold fitness while keeping the stroke long and tidy.`,
+        ``,
+        `Notes:`,
+        hasTest
+          ? `Record split, rate and heart rate at the end of the test. Use the cool-down to let HR and breathing fully settle.`
+          : `You should feel challenged but in control. You should not be completely empty at the end.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function buildDiary(meta){
+      const { program } = meta;
+      const start = parseISODate(program.start_date);
+      const end   = parseISODate(program.end_date);
+
+      if (!start || !end) {
+        throw new Error("start_date and finish_date (or program.start_date/program.end_date) are required.");
+      }
+      if (end < start){
+        throw new Error("end_date / finish_date is before start_date.");
+      }
+
+      const weekly = program.weekly_schedule || {};
+      const hasTestNote = String(program.notes || "").toLowerCase().includes("1k");
+
+      let out = buildIntro(meta);
+
+      const cur = new Date(start.getTime());
+      while (cur <= end){
+        const dow = DOW[cur.getDay()];  // "Mon", "Tue", ...
+        const session = weekly[dow] || "Rest";
+        const label = `🗓️ ${formatDateLong(cur)} — ${session}`;
+
+        if (/erg\s*\(ut2\)/i.test(session)){
+          out += templateErgUT2(label);
+        } else if (/erg\s*\(ut1\/?at\)/i.test(session)){
+          // If note says 1k test and this is the *last day* of the block, treat as test.
+          const isLastDay = formatDateShort(cur) === formatDateShort(end);
+          out += templateErgUT1AT(label, hasTestNote && isLastDay);
+        } else if (/water row/i.test(session)){
+          out += templateWaterRow(label);
+        } else if (/weight/i.test(session)){
+          out += templateWeights(label);
+        } else {
+          out += templateRest(label);
+        }
+
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      return out.trim() + "\n";
+    }
+
+    // ---------- MAIN BUTTON HANDLER ----------
+    $("#generateBtn").addEventListener("click", ()=>{
+      const src = $("#inputJson").value.trim();
+      if (!src){
+        toast("Paste JSON first", false);
         return;
       }
+      let raw;
       try{
-        const diary = buildDiary(cfg);
-        $("programOutput").value = diary;
-        showToast("Diary generated");
-      } catch (e){
-        showToast(e.message || "Error generating diary");
+        raw = JSON.parse(src);
+      }catch(e){
+        toast("Invalid JSON: " + e.message, false);
+        return;
+      }
+
+      try{
+        const meta = normalisePayload(raw);
+        if (!meta.program.start_date || !meta.program.end_date){
+          throw new Error("start_date and finish_date (or program.start_date/program.end_date) are required.");
+        }
+        const diary = buildDiary(meta);
+        $("#outputDiary").value = diary;
+        toast("Diary generated ✔");
+      }catch(e){
+        toast(e.message || "Error generating diary", false);
       }
     });
-
-    $("copyBtn").addEventListener("click", () => {
-      const txt = $("programOutput").value;
-      if (!txt.trim()) { showToast("Nothing to copy yet."); return; }
-      navigator.clipboard.writeText(txt).then(
-        ()=>showToast("Diary copied"),
-        ()=>showToast("Copy blocked by browser")
-      );
-    });
-
-    $("clearBtn").addEventListener("click", () => {
-      $("programOutput").value = "";
-    });
-
-    // preload sample for convenience
-    $("programJson").value = SAMPLE_JSON;
   </script>
 </body>
 </html>
