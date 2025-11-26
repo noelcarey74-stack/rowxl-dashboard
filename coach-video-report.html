@@ -1,254 +1,134 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>RowXL — Video Analysis Report Builder</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
+<meta charset="UTF-8" />
+<title>RowXL — Video Analysis Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <style>
 :root{
-  --bg:#020617;
-  --panel:#0f172a;
-  --panel2:#020617;
-  --text:#e5f0ff;
-  --muted:#9fb5d1;
-  --outline:#1e3a5f;
-  --brand:#2563eb;
+  --bg:#050b1a;--panel:#0c1633;--brand:#2f7cff;--text:#e8edff;--muted:#8fa2ff;--outline:#1e2f6b
 }
 *{box-sizing:border-box}
-body{
-  margin:0;
-  background:radial-gradient(circle at top,#0b1530 0,#020617 50%,#000 100%);
-  color:var(--text);
-  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-}
-.wrap{max-width:1100px;margin:40px auto;padding:0 20px}
-h1{margin:0 0 10px;font-size:28px}
-.panel{
-  background:var(--panel);
-  border:1px solid var(--outline);
-  border-radius:14px;
-  padding:16px;
-  margin-top:16px;
-}
-.layout{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:16px;
-}
-@media(max-width:900px){.layout{grid-template-columns:1fr}}
+body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#14216b 0%,#0a1233 35%,#050b1a 70%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif}
+.wrap{max-width:1200px;margin:40px auto;padding:20px}
+.title{font-size:28px;font-weight:700;margin-bottom:6px}
+.sub{color:var(--muted);margin-bottom:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:linear-gradient(180deg,#0f1a3d,#0b1230);border:1px solid var(--outline);border-radius:14px;padding:14px}
+label{font-size:12px;color:var(--muted);display:block;margin-top:8px}
+input,select,textarea{width:100%;margin-top:4px;background:#070e25;border:1px solid var(--outline);color:var(--text);padding:10px;border-radius:10px}
+textarea{min-height:90px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{background:linear-gradient(180deg,#3b82f6,#2563eb);border:none;color:white;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
+.btn.ghost{background:#0c1633;border:1px solid var(--outline)}
+.actions{display:flex;gap:10px;align-items:center;margin-top:12px}
+.output{min-height:360px;white-space:pre-wrap}
 
-label{
-  font-size:12px;
-  color:var(--muted);
-  display:block;
-  margin-bottom:3px;
-}
-
-input,select,textarea{
-  width:100%;
-  background:var(--panel2);
-  color:var(--text);
-  border:1px solid var(--outline);
-  border-radius:9px;
-  padding:8px;
-  font-size:13px;
-  outline:none;
-}
-
-textarea{min-height:100px;resize:vertical}
-
-.controls{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
-
-.btn{
-  padding:8px 12px;
-  border-radius:999px;
-  border:1px solid var(--outline);
-  background:#0b1635;
-  color:white;
-  cursor:pointer;
-}
-.btn.primary{background:linear-gradient(135deg,#0ea5e9,#2563eb);border:none}
-
-.tiny{font-size:12px;color:var(--muted);margin-top:6px}
-
-.toast{
-  position:fixed;
-  right:14px;
-  bottom:14px;
-  background:#0f172a;
-  border:1px solid var(--outline);
-  padding:8px 12px;
-  border-radius:999px;
-  display:none;
-}
+/* Drag & Drop */
+.dropzone{position:relative;border:2px dashed var(--outline);border-radius:12px;padding:18px;margin-top:6px;text-align:center;background:#060c25;transition:all .15s}
+.dropzone.drag{background:#0b1440;border-color:#3b82f6}
+.dropzone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.small{font-size:12px;color:var(--muted)}
+.fileinfo{margin-top:8px;font-size:12px;color:#a9bbff}
+.preview{margin-top:10px}
+video{max-width:100%;border-radius:10px;border:1px solid var(--outline)}
 </style>
 </head>
-
 <body>
 <div class="wrap">
-<h1>RowXL — Video Analysis Report</h1>
-<div class="tiny">Upload video, add context and generate a coach-style technical report.</div>
+  <div class="title">RowXL — Video Analysis Report</div>
+  <div class="sub">Drop a video, add context and generate a coach-style technical report.</div>
 
-<div class="panel layout">
+  <div class="grid">
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>Athlete Name</label>
+          <input id="athlete" placeholder="e.g. Noel Carey" />
+        </div>
+        <div>
+          <label>Boat Class</label>
+          <select id="boat"><option>1x</option><option>2x</option><option>2-</option><option>4x</option><option>4-</option><option>8+</option></select>
+        </div>
+      </div>
 
-<!-- LEFT SIDE -->
-<div>
+      <div class="row">
+        <div>
+          <label>Side / Position</label>
+          <input id="side" placeholder="Stroke / Bow / Seat position" />
+        </div>
+        <div>
+          <label>Session Type</label>
+          <input id="session" placeholder="Training / Race / Test / Technical" />
+        </div>
+      </div>
 
-<label>Athlete Name</label>
-<input id="athlete" placeholder="e.g. Noel Carey">
+      <label>Conditions</label>
+      <input id="conditions" placeholder="Flat / windy / chop / river / lane" />
 
-<label>Boat Class</label>
-<select id="boat">
-<option>1x</option><option>2x</option><option>4x</option>
-<option>2-</option><option>4-</option><option>4+</option>
-<option>8+</option>
-</select>
+      <label>Camera Angle</label>
+      <select id="angle"><option>Side-on</option><option>Front-on</option><option>Rear</option><option>Drone</option><option>Oblique</option></select>
 
-<label>Side / Position</label>
-<input id="side" placeholder="Stroke / Bow / Seat position">
+      <label>Upload Video</label>
+      <div id="dropzone" class="dropzone">
+        <div><strong>Drop your video here</strong> or click to select</div>
+        <div class="small">MP4, MOV, AVI supported</div>
+        <input id="videoInput" type="file" accept="video/*" />
+      </div>
+      <div id="fileinfo" class="fileinfo"></div>
+      <div id="preview" class="preview"></div>
 
-<label>Session Type</label>
-<input id="session" placeholder="Training / Race / Test / Technical row">
+      <label>Coach Notes (optional)</label>
+      <textarea id="notes" placeholder="What should the AI look for? Weak finish, catch timing, steering, race rehearsal…"></textarea>
 
-<label>Conditions</label>
-<input id="conditions" placeholder="Flat / windy / chop / river / lane">
+      <div class="actions">
+        <button class="btn" onclick="generate()">Generate Coach Report</button>
+        <button class="btn ghost" onclick="copyReport()">Copy</button>
+        <button class="btn ghost" onclick="clearAll()">Clear</button>
+      </div>
+      <div class="small">Video stays local — nothing is uploaded.</div>
+    </div>
 
-<label>Camera Angle</label>
-<select id="angle">
-<option>Side-on</option>
-<option>Bow-on</option>
-<option>Stern-on</option>
-<option>Overhead</option>
-<option>Unknown</option>
-</select>
-
-<label>Upload Video</label>
-<input id="video" type="file" accept="video/*">
-
-<label>Coach Notes (optional)</label>
-<textarea id="notes" placeholder="What should the AI look for? Weak finish, flat catch, race rehearsal, etc."></textarea>
-
-<div class="controls">
-  <button class="btn primary" onclick="generate()">Generate Coach Report</button>
+    <div class="card">
+      <label>Generated Report</label>
+      <div id="report" class="output">Report will appear here…</div>
+    </div>
+  </div>
 </div>
-
-<div class="tiny">Video is not uploaded to any server. This is local workflow only for now.</div>
-</div>
-
-<!-- RIGHT SIDE -->
-<div>
-<label>Generated Report</label>
-<textarea id="report" placeholder="Report will appear here..."></textarea>
-
-<div class="controls">
-  <button class="btn" onclick="copy()">Copy Report</button>
-  <button class="btn" onclick="clearAll()">Clear</button>
-</div>
-</div>
-
-</div>
-</div>
-
-<div class="toast" id="toast"></div>
 
 <script>
-function talk(msg){
-  const t=document.getElementById("toast");
-  t.textContent=msg;
-  t.style.display="block";
-  clearTimeout(t._h);
-  t._h=setTimeout(()=>t.style.display="none",2500);
+const dz = document.getElementById('dropzone');
+const input = document.getElementById('videoInput');
+const info = document.getElementById('fileinfo');
+const preview = document.getElementById('preview');
+
+['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('drag')}));
+['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('drag')}));
+
+dz.addEventListener('drop', e => { if(e.dataTransfer.files.length){ input.files = e.dataTransfer.files; showFile(); }});
+input.addEventListener('change', showFile);
+
+function showFile(){
+  const f = input.files[0];
+  if(!f) return;
+  info.textContent = `Selected: ${f.name} (${(f.size/1024/1024).toFixed(2)} MB)`;
+  const url = URL.createObjectURL(f);
+  preview.innerHTML = `<video controls src="${url}"></video>`;
 }
 
 function generate(){
-  const a=document.getElementById("athlete").value||"Athlete";
-  const b=document.getElementById("boat").value;
-  const s=document.getElementById("side").value||"—";
-  const se=document.getElementById("session").value||"Rowing session";
-  const c=document.getElementById("conditions").value||"Unspecified";
-  const ang=document.getElementById("angle").value;
-  const n=document.getElementById("notes").value;
-  const file=document.getElementById("video").files[0];
+  const athlete = val('athlete'), boat = val('boat'), side = val('side'), session = val('session');
+  const cond = val('conditions'), ang = val('angle'), notes = val('notes');
+  const f = input.files[0]?.name || 'No file attached';
 
-  const today=new Date().toLocaleDateString("en-GB");
+  const text = `ROWXL VIDEO ANALYSIS REPORT\n\nAthlete: ${athlete}\nBoat: ${boat}\nSeat: ${side}\nSession: ${session}\nConditions: ${cond}\nCamera: ${ang}\nVideo: ${f}\n\nKEY FINDINGS:\n• Catch timing and blade control observations\n• Body sequencing and posture\n• Finish control and handle path\n\nPRIORITY FIXES:\n1. Improve blade entry consistency\n2. Reduce early layback\n3. Stabilise hands through finish\n\nCOACH NOTES:\n${notes || 'None provided'}\n\nOVERALL IMPRESSION:\nTechnical efficiency is improving; next focus is repeatability under rate and fatigue.`;
 
-  let out = `
-ROWXL — VIDEO TECHNIQUE REPORT
-------------------------------------------
-Athlete: ${a}
-Boat: ${b}
-Seat / Side: ${s}
-Session type: ${se}
-Conditions: ${c}
-Camera angle: ${ang}
-Date reviewed: ${today}
-Video file: ${file ? file.name : "Not uploaded"}
-------------------------------------------
-
-OVERVIEW:
-This technical report is based on visual analysis of the rowing stroke from submitted footage. Findings highlight visible movement patterns, timing consistency and posture trends.
-
-KEY FINDINGS:
-• Stroke sequencing shows competent structure, with scope for refinement in timing under load.
-• Posture remains mostly stable, though fatigue appears to influence upper-body control.
-• Recovery speed varies, suggesting inconsistent rhythm between stroke phases.
-• Catch front-end preparation lacks full relaxation into compression.
-• Finish position shows signs of early arm draw in heavier strokes.
-
-PRIMARY CORRECTIONS:
-1. BODY PREP AT CATCH  
-   Avoid early opening before leg drive. Maintain connection with tension in lats before drive.
-
-2. HANDLE PATH THROUGH FINISH  
-   Maintain straight draw into body. Eliminate upward flick or elbow flare.
-
-3. RECOVERY CONTROL  
-   Improve slide control through mid-recovery. Resist seat acceleration.
-
-4. POSTURE STABILITY  
-   Lock trunk position through drive. No waist collapse under power.
-
-5. SYMMETRY FOCUS (if applicable)  
-   Watch for load discrepancies between sides.
-
-SUGGESTED DRILLS:
-• Pause rowing at half-slide  
-• Single-hand rowing (outside arm dominant)  
-• Legs-only into arms-only sequencing  
-• Rate ladders with focus on rhythm (18 → 26 spm)  
-• Feet-out rowing for posture discipline
-
-NOTES PROVIDED BY COACH:
-${n || "None"}
-
-CONFIDENCE LEVEL:
-Moderate — Analysis is visual only. Water conditions, camera angle and lighting may limit precision.
-
-COACH SUMMARY:
-This athlete shows a solid base stroke with the greatest upside in consistency and technical polish under pressure. Focus on posture and recovery sequencing will drive efficiency gains.
-
-------------------------------------------
-Report generated by RowXL
-Coach & Analysis Assistant
-`;
-
-  document.getElementById("report").value=out.trim();
-  talk("Report generated");
+  document.getElementById('report').textContent = text;
 }
 
-function copy(){
-  const r=document.getElementById("report");
-  if(!r.value){talk("Nothing to copy");return;}
-  navigator.clipboard.writeText(r.value);
-  talk("Copied");
-}
-
-function clearAll(){
-  document.querySelectorAll("input,textarea").forEach(i=>i.value="");
-  talk("Cleared");
-}
+function val(id){return document.getElementById(id).value || '-'}
+function copyReport(){navigator.clipboard.writeText(document.getElementById('report').textContent)}
+function clearAll(){document.querySelectorAll('input,textarea,select').forEach(e=>e.value='');input.value='';info.textContent='';preview.innerHTML='';document.getElementById('report').textContent='Report will appear here…'}
 </script>
-
 </body>
 </html>
