@@ -1,231 +1,224 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>RowXL — Coach Video Report (Coach Intelligence)</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<title>RowXL — Coach Video Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body {
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-  background:radial-gradient(circle at top,#0b1530 0,#020617 55%,#000 100%);
-  color:#e5f0ff;
-}
-.wrap { max-width:1200px; margin:40px auto; padding:20px }
-h1 { margin-bottom:5px }
-small { color:#9fb5d1 }
-
-.panel {
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:16px;
-  background:#0f172a;
-  border-radius:14px;
-  padding:16px;
-  border:1px solid #1e3a5f;
-}
-
-label { font-size:12px; color:#9fb5d1; display:block; margin-top:8px }
-input, select, textarea {
-  width:100%;
-  padding:8px;
-  border-radius:8px;
+body{
   background:#020617;
+  color:#e5f0ff;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  margin:0;
+}
+.wrap{max-width:1200px;margin:20px auto;padding:20px}
+h1{margin-bottom:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.panel{
+  background:#0f172a;
   border:1px solid #1e3a5f;
-  color:white;
+  border-radius:14px;
+  padding:16px
 }
-textarea { min-height:120px }
-
-.dropzone {
-  margin-top:10px;
-  border:2px dashed #1e3a5f;
+label{display:block;font-size:12px;color:#9fb5d1;margin:6px 0}
+input, select, textarea{
+  width:100%;
+  background:#020617;
+  color:#e5f0ff;
+  border:1px solid #1e3a5f;
   border-radius:10px;
-  padding:20px;
-  text-align:center;
-  color:#9fb5d1;
+  padding:8px;
 }
-
-.btn {
+textarea{min-height:90px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.small{font-size:12px;color:#9fb5d1}
+button{
   background:linear-gradient(135deg,#0ea5e9,#2563eb);
   border:none;
-  border-radius:999px;
   color:white;
   padding:10px 14px;
-  margin-top:10px;
+  border-radius:999px;
   cursor:pointer;
 }
-
-.output {
-  white-space:pre-wrap;
-  background:#020617;
-  border:1px solid #1e3a5f;
-  padding:12px;
-  border-radius:10px;
-  min-height:400px;
-}
-
-video {
+#drop{
+  border:2px dashed #2563eb;
+  padding:10px;
+  text-align:center;
   margin-top:10px;
-  max-width:100%;
-  border-radius:10px;
+  border-radius:12px;
+  cursor:pointer;
 }
+video{width:100%;border-radius:12px;margin-top:10px}
+#report{
+  min-height:520px;
+  white-space:pre-wrap;
+}
+.seats{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
 </style>
 </head>
-
 <body>
 
 <div class="wrap">
-<h1>RowXL — Video Coach Intelligence</h1>
-<small>Coach reasoning engine + drill intelligence (no AI yet — coach brain active)</small>
+<h1>RowXL — Coach Video Report</h1>
+<div class="small">Upload video, add context, seat notes, and generate a full coach-style report.</div>
+
+<div class="grid">
 
 <div class="panel">
-<div>
-
 <label>Athlete Name</label>
-<input id="athlete" placeholder="Name" />
+<input id="athlete">
 
-<label>Boat Class</label>
-<select id="boat">
-<option>1x</option><option>2x</option><option>2-</option>
-<option>4x</option><option>4+</option><option>4-</option>
-<option>8+</option>
-</select>
-
-<label>Seat</label>
-<input id="seat" placeholder="Stroke / Bow / Seat" />
-
-<label>Session Type</label>
-<input id="session" placeholder="Training / Race / Test" />
-
-<label>Conditions</label>
-<input id="cond" placeholder="Wind, chop, flat..." />
-
-<label>Camera Angle</label>
-<select id="cam">
-<option>Side-on</option>
-<option>Bow</option>
-<option>Stern</option>
-<option>Quarter</option>
-</select>
-
-<div id="dropArea" class="dropzone">Drop video here or click</div>
-<input type="file" id="file" hidden accept="video/*"/>
-
-<video id="preview" controls hidden></video>
-
-<label>Coach Notes (this now drives the report)</label>
-<textarea id="notes" placeholder="Write exactly what you see — faults, comments, instincts..."></textarea>
-
-<button class="btn" onclick="generate()">Generate Coach Report</button>
-
+<div class="row">
+  <div>
+    <label>Boat Class</label>
+    <select id="boat">
+      <option>1x</option>
+      <option>2x</option>
+      <option>2-</option>
+      <option>4x</option>
+      <option>4+</option>
+      <option>4-</option>
+      <option>8+</option>
+    </select>
+  </div>
+  <div>
+    <label>Session Type</label>
+    <input id="session" placeholder="Training / Race / Test">
+  </div>
 </div>
 
-<div>
-<div class="output" id="out">Report will appear here...</div>
+<label>Conditions</label>
+<input id="conditions">
+
+<label>Camera Angle</label>
+<select id="camera">
+  <option>Side-on</option>
+  <option>Front-on</option>
+  <option>Rear</option>
+  <option>Drone</option>
+</select>
+
+<div id="drop">Drop video here or click to select</div>
+<input type="file" id="videoInput" hidden>
+<video id="preview" controls></video>
+
+<label>Seat-by-seat Notes (optional)</label>
+<div class="seats">
+  <textarea id="s1" placeholder="Seat 1"></textarea>
+  <textarea id="s2" placeholder="Seat 2"></textarea>
+  <textarea id="s3" placeholder="Seat 3"></textarea>
+  <textarea id="s4" placeholder="Seat 4"></textarea>
+  <textarea id="s5" placeholder="Seat 5"></textarea>
+  <textarea id="s6" placeholder="Seat 6"></textarea>
+  <textarea id="s7" placeholder="Seat 7"></textarea>
+  <textarea id="s8" placeholder="Seat 8"></textarea>
+</div>
+
+<label>Coach Notes (general)</label>
+<textarea id="notes"></textarea>
+
+<br>
+<button onclick="generate()">Generate Coach Report</button>
+</div>
+
+<div class="panel">
+<textarea id="report" placeholder="Report will appear here..."></textarea>
+<br><br>
+<button onclick="copy()">Copy Report</button>
 </div>
 
 </div>
 </div>
 
 <script>
-const drop = document.getElementById("dropArea");
-const fileInput = document.getElementById("file");
-const video = document.getElementById("preview");
+const drop = document.getElementById("drop")
+const input = document.getElementById("videoInput")
+const preview = document.getElementById("preview")
 
-drop.onclick = ()=>fileInput.click();
-
-drop.ondragover = e => { e.preventDefault(); drop.style.borderColor="#38bdf8"; };
-drop.ondragleave = ()=> drop.style.borderColor="#1e3a5f";
+drop.onclick = ()=> input.click()
+drop.ondragover = e=>{e.preventDefault();drop.style.borderColor="#22c55e"}
+drop.ondragleave = ()=> drop.style.borderColor="#2563eb"
 drop.ondrop = e=>{
-  e.preventDefault();
-  fileInput.files = e.dataTransfer.files;
-  loadVideo();
-};
+  e.preventDefault()
+  input.files = e.dataTransfer.files
+  loadVideo()
+}
 
-fileInput.onchange = loadVideo;
-
+input.onchange = loadVideo
 function loadVideo(){
-  const f = fileInput.files[0];
-  if(!f) return;
-  video.src = URL.createObjectURL(f);
-  video.hidden = false;
-  drop.innerHTML = "Loaded: " + f.name;
+  const file = input.files[0]
+  preview.src = URL.createObjectURL(file)
+  drop.textContent = "Loaded: " + file.name
+  drop.style.borderColor="#22c55e"
 }
 
 function generate(){
-  const name = athlete.value || "Athlete";
-  const boat = document.getElementById("boat").value;
-  const seat = seatInput = document.getElementById("seat").value || "—";
-  const cond = document.getElementById("cond").value || "Not specified";
-  const cam  = document.getElementById("cam").value;
-  const notes = document.getElementById("notes").value.toLowerCase();
+  const name = athlete.value
+  const boat = document.getElementById("boat").value
+  const isCrew = boat !== "1x"
 
-  let findings=[], drills=[], cues=[];
-
-  if(notes.includes("early arm") || notes.includes("bending")){
-    findings.push("Early arm engagement breaking leg drive sequence");
-    drills.push("Pause rowing (legs down)", "Reverse pick drill", "Arms-away only pauses");
-    cues.push("Arms last", "Hang before pull");
+  let seatText = ""
+  for(let i=1;i<=8;i++){
+    const txt = document.getElementById("s"+i).value.trim()
+    if(txt) seatText += `Seat ${i}: ${txt}\n`
   }
 
-  if(notes.includes("rush") || notes.includes("fast")){
-    findings.push("Slide rushing and loss of control on recovery");
-    drills.push("Rate capped paddling", "Feet-out rowing");
-    cues.push("Slow up", "Control the slide");
-  }
+  let drills = isCrew
+    ? `CREW DRILLS:
+• Pause rowing at body-over
+• Square blade crew rowing
+• Ratio rowing
+• Pick drill as full boat
+• Low-rate rhythm control
+• Cut-the-cake timing drill`
+    : `SCULLING DRILLS:
+• Feet-out rowing
+• Pause at half-slide
+• Reverse pick drill
+• Square blade sculling
+• Catch placement drill`
 
-  if(notes.includes("catch")){
-    findings.push("Inconsistent front-end placement and timing");
-    drills.push("Square blade rowing", "Roll-ups", "Catch placement drill");
-    cues.push("Place then push", "Front first");
-  }
-
-  if(notes.includes("finish")){
-    findings.push("Unstable handle path and release");
-    drills.push("Tap-down drill", "Finish holds");
-    cues.push("Flat hands away", "Clean tap");
-  }
-
-  if(findings.length === 0){
-    findings.push("General technical inefficiency observed under load");
-    drills.push("Pause rowing", "Square blade paddling");
-    cues.push("Length first", "Relaxed power");
-  }
-
-  let text = `ROWXL COACH REPORT
+  let report =
+`ROWXL COACH REPORT
 
 Athlete: ${name}
 Boat: ${boat}
-Seat: ${seat}
-Conditions: ${cond}
-Camera: ${cam}
+Session: ${session.value}
+Conditions: ${conditions.value}
+Camera: ${camera.value}
 
 KEY FINDINGS:
-${findings.map(f=>"• "+f).join("\n")}
+Based on video observation and coach input, the focus is on blade placement consistency, body sequencing through the drive, and posture through load.
+
+SEAT ANALYSIS:
+${seatText || "No seat-specific notes provided."}
 
 PRIORITY FIXES:
-1. ${findings[0]}
-2. Technical consistency under fatigue
-3. Blade control at the front end
+1. Sequencing through the legs before arm engagement
+2. Firmer and earlier front-end connection
+3. Stability and posture under load
 
-DRILLS PRESCRIBED:
-${drills.map(d=>"• "+d).join("\n")}
+${drills}
 
 COACHING CUES:
-${cues.map(c=>"• "+c).join("\n")}
-
-SESSION STRUCTURE SUGGESTION:
-• Warm-up: pause rowing + square blades
-• Main work: low rate control focus
-• Cool-down: technical steady paddle
+• Hang before you pull  
+• Legs then body then arms  
+• Place then drive  
+• Finish tall  
+• Let the boat run
 
 OVERALL IMPRESSION:
-The crew shows a workable technical platform but consistency drops under load and rate. Emphasis now should shift to control, repeatability and blade discipline.
+The technical base is present, but consistency drops under rate and pressure. Priority now is rhythm, blade discipline, and repeatability under load.
 
-SIGNED: Noel Carey — Coach & Analyst
-`;
+SIGNED:
+Noel Carey — Coach & Analyst`
 
-  out.textContent = text;
+document.getElementById("report").value = report
+}
+
+function copy(){
+  navigator.clipboard.writeText(report.value)
+  alert("Report copied")
 }
 </script>
 
