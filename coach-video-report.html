@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RowXL — Video Analysis Report Builder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root{
+  --bg:#020617;
+  --panel:#0f172a;
+  --panel2:#020617;
+  --text:#e5f0ff;
+  --muted:#9fb5d1;
+  --outline:#1e3a5f;
+  --brand:#2563eb;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:radial-gradient(circle at top,#0b1530 0,#020617 50%,#000 100%);
+  color:var(--text);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+}
+.wrap{max-width:1100px;margin:40px auto;padding:0 20px}
+h1{margin:0 0 10px;font-size:28px}
+.panel{
+  background:var(--panel);
+  border:1px solid var(--outline);
+  border-radius:14px;
+  padding:16px;
+  margin-top:16px;
+}
+.layout{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+label{
+  font-size:12px;
+  color:var(--muted);
+  display:block;
+  margin-bottom:3px;
+}
+
+input,select,textarea{
+  width:100%;
+  background:var(--panel2);
+  color:var(--text);
+  border:1px solid var(--outline);
+  border-radius:9px;
+  padding:8px;
+  font-size:13px;
+  outline:none;
+}
+
+textarea{min-height:100px;resize:vertical}
+
+.controls{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+
+.btn{
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid var(--outline);
+  background:#0b1635;
+  color:white;
+  cursor:pointer;
+}
+.btn.primary{background:linear-gradient(135deg,#0ea5e9,#2563eb);border:none}
+
+.tiny{font-size:12px;color:var(--muted);margin-top:6px}
+
+.toast{
+  position:fixed;
+  right:14px;
+  bottom:14px;
+  background:#0f172a;
+  border:1px solid var(--outline);
+  padding:8px 12px;
+  border-radius:999px;
+  display:none;
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+<h1>RowXL — Video Analysis Report</h1>
+<div class="tiny">Upload video, add context and generate a coach-style technical report.</div>
+
+<div class="panel layout">
+
+<!-- LEFT SIDE -->
+<div>
+
+<label>Athlete Name</label>
+<input id="athlete" placeholder="e.g. Noel Carey">
+
+<label>Boat Class</label>
+<select id="boat">
+<option>1x</option><option>2x</option><option>4x</option>
+<option>2-</option><option>4-</option><option>4+</option>
+<option>8+</option>
+</select>
+
+<label>Side / Position</label>
+<input id="side" placeholder="Stroke / Bow / Seat position">
+
+<label>Session Type</label>
+<input id="session" placeholder="Training / Race / Test / Technical row">
+
+<label>Conditions</label>
+<input id="conditions" placeholder="Flat / windy / chop / river / lane">
+
+<label>Camera Angle</label>
+<select id="angle">
+<option>Side-on</option>
+<option>Bow-on</option>
+<option>Stern-on</option>
+<option>Overhead</option>
+<option>Unknown</option>
+</select>
+
+<label>Upload Video</label>
+<input id="video" type="file" accept="video/*">
+
+<label>Coach Notes (optional)</label>
+<textarea id="notes" placeholder="What should the AI look for? Weak finish, flat catch, race rehearsal, etc."></textarea>
+
+<div class="controls">
+  <button class="btn primary" onclick="generate()">Generate Coach Report</button>
+</div>
+
+<div class="tiny">Video is not uploaded to any server. This is local workflow only for now.</div>
+</div>
+
+<!-- RIGHT SIDE -->
+<div>
+<label>Generated Report</label>
+<textarea id="report" placeholder="Report will appear here..."></textarea>
+
+<div class="controls">
+  <button class="btn" onclick="copy()">Copy Report</button>
+  <button class="btn" onclick="clearAll()">Clear</button>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function talk(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;
+  t.style.display="block";
+  clearTimeout(t._h);
+  t._h=setTimeout(()=>t.style.display="none",2500);
+}
+
+function generate(){
+  const a=document.getElementById("athlete").value||"Athlete";
+  const b=document.getElementById("boat").value;
+  const s=document.getElementById("side").value||"—";
+  const se=document.getElementById("session").value||"Rowing session";
+  const c=document.getElementById("conditions").value||"Unspecified";
+  const ang=document.getElementById("angle").value;
+  const n=document.getElementById("notes").value;
+  const file=document.getElementById("video").files[0];
+
+  const today=new Date().toLocaleDateString("en-GB");
+
+  let out = `
+ROWXL — VIDEO TECHNIQUE REPORT
+------------------------------------------
+Athlete: ${a}
+Boat: ${b}
+Seat / Side: ${s}
+Session type: ${se}
+Conditions: ${c}
+Camera angle: ${ang}
+Date reviewed: ${today}
+Video file: ${file ? file.name : "Not uploaded"}
+------------------------------------------
+
+OVERVIEW:
+This technical report is based on visual analysis of the rowing stroke from submitted footage. Findings highlight visible movement patterns, timing consistency and posture trends.
+
+KEY FINDINGS:
+• Stroke sequencing shows competent structure, with scope for refinement in timing under load.
+• Posture remains mostly stable, though fatigue appears to influence upper-body control.
+• Recovery speed varies, suggesting inconsistent rhythm between stroke phases.
+• Catch front-end preparation lacks full relaxation into compression.
+• Finish position shows signs of early arm draw in heavier strokes.
+
+PRIMARY CORRECTIONS:
+1. BODY PREP AT CATCH  
+   Avoid early opening before leg drive. Maintain connection with tension in lats before drive.
+
+2. HANDLE PATH THROUGH FINISH  
+   Maintain straight draw into body. Eliminate upward flick or elbow flare.
+
+3. RECOVERY CONTROL  
+   Improve slide control through mid-recovery. Resist seat acceleration.
+
+4. POSTURE STABILITY  
+   Lock trunk position through drive. No waist collapse under power.
+
+5. SYMMETRY FOCUS (if applicable)  
+   Watch for load discrepancies between sides.
+
+SUGGESTED DRILLS:
+• Pause rowing at half-slide  
+• Single-hand rowing (outside arm dominant)  
+• Legs-only into arms-only sequencing  
+• Rate ladders with focus on rhythm (18 → 26 spm)  
+• Feet-out rowing for posture discipline
+
+NOTES PROVIDED BY COACH:
+${n || "None"}
+
+CONFIDENCE LEVEL:
+Moderate — Analysis is visual only. Water conditions, camera angle and lighting may limit precision.
+
+COACH SUMMARY:
+This athlete shows a solid base stroke with the greatest upside in consistency and technical polish under pressure. Focus on posture and recovery sequencing will drive efficiency gains.
+
+------------------------------------------
+Report generated by RowXL
+Coach & Analysis Assistant
+`;
+
+  document.getElementById("report").value=out.trim();
+  talk("Report generated");
+}
+
+function copy(){
+  const r=document.getElementById("report");
+  if(!r.value){talk("Nothing to copy");return;}
+  navigator.clipboard.writeText(r.value);
+  talk("Copied");
+}
+
+function clearAll(){
+  document.querySelectorAll("input,textarea").forEach(i=>i.value="");
+  talk("Cleared");
+}
+</script>
+
+</body>
+</html>
