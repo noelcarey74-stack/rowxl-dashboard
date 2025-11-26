@@ -19,143 +19,558 @@
       margin:0;
       background:radial-gradient(circle at top,#0b1530 0,#020617 55%,#000 100%);
       color:var(--text);
-      font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial;
+      font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
     }
     .wrap{ max-width:1100px; margin:40px auto; padding:0 20px }
-    h1{ font-size:28px; margin:0 0 10px }
-    .panel{ background:var(--panel); border:1px solid var(--outline); border-radius:14px; padding:16px }
-    .layout{ display:grid; grid-template-columns:1fr 1fr; gap:16px }
-    @media (max-width:900px){ .layout{ grid-template-columns:1fr } }
-    label{ font-size:12px; color:var(--muted) }
-    textarea{
-      width:100%; min-height:360px; resize:vertical;
-      background:var(--panel2); color:var(--text);
-      border:1px solid var(--outline); border-radius:10px;
-      padding:10px; font-family:ui-monospace,monospace;
+    h1{ margin:0 0 10px; font-size:28px }
+
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--outline);
+      border-radius:14px;
+      padding:16px;
     }
-    .btn{ padding:8px 12px; border-radius:999px; border:1px solid var(--outline); cursor:pointer }
-    .btn.primary{ background:#2563eb; color:white }
-    .btn.ghost{ background:transparent }
-    .controls-row{ display:flex; gap:8px; margin-top:8px }
-    .tiny{ font-size:12px; color:var(--muted) }
-    .toast{ position:fixed; right:12px; bottom:12px; padding:8px 12px; border-radius:999px; background:#0f172a; border:1px solid var(--outline); display:none }
+
+    .layout{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:16px;
+    }
+
+    @media (max-width:900px){
+      .layout{ grid-template-columns:1fr }
+    }
+
+    label{ font-size:12px; color:var(--muted); margin:0 0 4px; display:block }
+
+    textarea{
+      width:100%;
+      min-height:360px;
+      resize:vertical;
+      background:var(--panel2);
+      color:var(--text);
+      border:1px solid var(--outline);
+      border-radius:10px;
+      padding:10px;
+      font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      outline:none;
+    }
+    textarea::placeholder{ color:#64748b }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid var(--outline);
+      background:rgba(15,23,42,.9);
+      color:var(--text);
+      font-size:13px;
+      cursor:pointer;
+      text-decoration:none;
+    }
+    .btn.primary{
+      background:linear-gradient(135deg,#0ea5e9,#2563eb);
+      border-color:#2563eb;
+      color:#e5f0ff;
+    }
+    .btn.ghost{ background:transparent; opacity:.9 }
+    .btn:disabled{ opacity:.6; cursor:default }
+
+    .controls-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .tiny{ font-size:12px; color:var(--muted); margin-top:8px }
+    .toast{
+      position:fixed;
+      right:14px;
+      bottom:14px;
+      background:#0f172a;
+      border:1px solid var(--outline);
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:13px;
+      display:none;
+      z-index:50;
+    }
   </style>
 </head>
 <body>
-<div class="wrap">
-<h1>RowXL — Program Text Generator</h1>
-<div class="tiny">Paste JSON → Generate full diary → Copy.</div>
-
-<div class="panel" style="margin-top:16px">
-  <div class="layout">
-    <div>
-      <label>Program JSON</label>
-      <textarea id="inputJson"></textarea>
-      <div class="controls-row">
-        <button id="generateBtn" class="btn primary">Generate Diary</button>
-        <button id="clearBtn" class="btn ghost">Clear</button>
-      </div>
+  <div class="wrap">
+    <h1>RowXL — Program Text Generator</h1>
+    <div class="tiny">
+      Paste the JSON you receive from the Program Builder on the left, then click
+      <strong>Generate diary</strong>. A full day-by-day training diary will appear on the right for you to copy.
     </div>
-    <div>
-      <label>Diary Output</label>
-      <textarea id="outputDiary"></textarea>
-      <div class="controls-row">
-        <button id="copyBtn" class="btn ghost">Copy</button>
+
+    <div class="panel" style="margin-top:18px">
+      <div class="layout">
+        <!-- LEFT: JSON INPUT -->
+        <div>
+          <label for="inputJson">Program JSON</label>
+          <textarea id="inputJson" spellcheck="false" placeholder='Paste JSON from Program Builder here...'></textarea>
+          <div class="controls-row">
+            <button id="loadSampleBtn" class="btn ghost" type="button">Load sample JSON</button>
+            <button id="generateBtn" class="btn primary" type="button">Generate diary</button>
+          </div>
+        </div>
+
+        <!-- RIGHT: DIARY OUTPUT -->
+        <div>
+          <label for="outputDiary">Generated Training Diary (copy &amp; paste)</label>
+          <textarea id="outputDiary" spellcheck="false" placeholder="Your program diary will appear here..."></textarea>
+          <div class="controls-row">
+            <button id="copyDiaryBtn" class="btn ghost" type="button">Copy diary</button>
+            <button id="clearBtn" class="btn ghost" type="button">Clear</button>
+          </div>
+          <div class="tiny">
+            Every day will include: Warm-up, Main Set, Stroke Rate/HR zone (where relevant),
+            Technical Focus, Notes, and an Athlete Notes section. A short summary will be added at the end.
+          </div>
+        </div>
       </div>
     </div>
   </div>
-</div>
-</div>
 
-<div id="toast" class="toast"></div>
+  <div id="toast" class="toast"></div>
 
-<script>
-const $ = s => document.querySelector(s)
-const toast = m => { const t=$("#toast"); t.textContent=m; t.style.display="block"; setTimeout(()=>t.style.display="none",2500) }
+  <script>
+    const $ = s => document.querySelector(s);
+    const toast = (msg, ok=true)=>{
+      const t = $("#toast");
+      t.textContent = msg;
+      t.style.display = "block";
+      t.style.borderColor = ok ? "#16a34a" : "#b91c1c";
+      clearTimeout(t._h);
+      t._h = setTimeout(()=>{ t.style.display="none"; }, 2600);
+    };
 
-$("#clearBtn").onclick = ()=>{ $("#inputJson").value=""; $("#outputDiary").value="" }
-$("#copyBtn").onclick = async()=>{ await navigator.clipboard.writeText($("#outputDiary").value); toast("Copied") }
+    // ---- SAMPLE JSON (matches what your Program Builder sends) ----
+    const SAMPLE = JSON.stringify({
+      "notes": "I’m doing a 1k test at the end of the program",
+      "gender": "Male",
+      "category": "Masters",
+      "start_date": "2025-11-26",
+      "finish_date": "2025-12-01",
+      "athlete_name": "Noel Carey",
+      "athlete_email": "noelcarey74@yahoo.ie",
+      "weekly_schedule": {
+        "Fri": "Water Row",
+        "Mon": "Erg (UT2)",
+        "Sat": "Weights",
+        "Sun": "Erg (UT1/AT)",
+        "Thu": "Water Row",
+        "Tue": "Weights",
+        "Wed": "Rest"
+      },
+      "intensity_percent": 75
+    }, null, 2);
 
-// ========= SMART NOTE READER =========
-function readNotes(note){
-  const n = (note||"").toLowerCase()
-  return {
-    test1k: n.includes("1k"),
-    test5k: n.includes("5k"),
-    regatta: n.includes("regatta") || n.includes("race") || n.includes("final") || n.includes("championship")
-  }
-}
+    $("#loadSampleBtn").addEventListener("click", ()=>{
+      $("#inputJson").value = SAMPLE;
+      toast("Sample JSON loaded");
+    });
 
-// ========= DATE HELPERS =========
-const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
-const parse = d=>new Date(d)
-const fmt = d=>d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"})
-const iso = d=>d.toISOString().slice(0,10)
+    $("#clearBtn").addEventListener("click", ()=>{
+      $("#inputJson").value = "";
+      $("#outputDiary").value = "";
+    });
 
-// ========= GENERATOR =========
-$("#generateBtn").onclick=()=>{
-  let raw
-  try{ raw=JSON.parse($("#inputJson").value) }catch{ return toast("Invalid JSON") }
+    $("#copyDiaryBtn").addEventListener("click", async ()=>{
+      const text = $("#outputDiary").value;
+      if (!text.trim()) { toast("Nothing to copy", false); return; }
+      try{
+        await navigator.clipboard.writeText(text);
+        toast("Diary copied ✔");
+      }catch(e){
+        toast("Copy failed", false);
+      }
+    });
 
-  const name = raw.athlete_name || "Athlete"
-  const start = parse(raw.start_date)
-  const end = parse(raw.finish_date)
-  const weekly = raw.weekly_schedule || {}
-  const intent = readNotes(raw.notes)
+    // ---------- JSON NORMALISATION ----------
+    function normalisePayload(raw){
+      // Athlete block
+      const athlete = raw.athlete ? {...raw.athlete} : {};
+      if (!athlete.name && raw.athlete_name) athlete.name = raw.athlete_name;
+      if (!athlete.email && raw.athlete_email) athlete.email = raw.athlete_email;
+      if (!athlete.gender && raw.gender) athlete.gender = raw.gender;
+      if (!athlete.category && raw.category) athlete.category = raw.category;
 
-  let out = `Masters ${raw.gender||""} Training Diary\n`
-  out+=`Dates: ${raw.start_date} → ${raw.finish_date}\n`
-  out+=`Intensity: ~${raw.intensity_percent||75}%\n\n------------------------------------------------------------\n\n`
+      // Program block (accept both nested + flat fields)
+      const program = raw.program ? {...raw.program} : {};
+      if (!program.start_date && raw.start_date) program.start_date = raw.start_date;
+      if (!program.end_date && (raw.finish_date || raw.end_date)) {
+        program.end_date = raw.finish_date || raw.end_date;
+      }
+      if (program.intensity_percent == null && raw.intensity_percent != null) {
+        program.intensity_percent = raw.intensity_percent;
+      }
+      if (!program.weekly_schedule && raw.weekly_schedule) {
+        program.weekly_schedule = raw.weekly_schedule;
+      }
+      if (!program.focus && raw.focus) program.focus = raw.focus;
+      if (!program.notes && raw.notes) program.notes = raw.notes;
 
-  const cur=new Date(start)
-  while(cur<=end){
-    const day=DOW[cur.getDay()]
-    let sess=weekly[day]||"Rest"
-    const label=`🗓️ ${fmt(cur)} — ${sess}`
-    const last=iso(cur)===iso(end)
+      const title = raw.title ||
+        `${athlete.category || "Masters"}${athlete.gender ? " – " + athlete.gender : ""} Training Diary`.trim();
+      const quote = raw.quote || "Consistency builds champions.";
 
-    out+=label+"\n\n"
-
-    if(intent.regatta && last){
-      out+=`Warm-up:\n15 min progressive paddle\n\nMain Set:\nRACE DAY / REGATTA\n\nFocus:\nExecute your race plan. Row with confidence.\n\nNotes:\nFull recovery after racing.\n\n`
+      return { title, athlete, program, quote };
     }
-    else if(intent.test1k && last && /erg/i.test(sess)){
-      out+=`Warm-up:\n10 min + 3 short bursts\n\nMain Set:\n1 × 1,000 m TEST\n\nFocus:\nRace execution and pacing.\n\nNotes:\nRecord result.\n\n`
-    }
-    else if(intent.test5k && last && /erg/i.test(sess)){
-      out+=`Warm-up:\n10 min smooth\n\nMain Set:\n1 × 5,000 m TEST\n\nFocus:\nConsistency under fatigue.\n\nNotes:\nRecord average split.\n\n`
-    }
-    else if(/water/i.test(sess)){
-      out+=`Steady technical water session focused on timing and balance.\n\n`
-    }
-    else if(/weight/i.test(sess)){
-      out+=`Strength and robustness session.\n\n`
-    }
-    else if(/erg/i.test(sess)){
-      out+=`Aerobic / threshold erg session.\n\n`
-    }
-    else{
-      out+=`Rest and recovery.\n\n`
+
+    function parseISODate(str){
+      const parts = String(str).split("-");
+      if (parts.length !== 3) return null;
+      const y = parseInt(parts[0],10);
+      const m = parseInt(parts[1],10);
+      const d = parseInt(parts[2],10);
+      if (!y || !m || !d) return null;
+      return new Date(y, m-1, d);
     }
 
-    out+=`Athlete Notes:\n________________________\n\n------------------------------------------------------------\n\n`
-    cur.setDate(cur.getDate()+1)
-  }
+    function formatDateLong(d){
+      return d.toLocaleDateString("en-GB", {
+        weekday:"long",
+        day:"numeric",
+        month:"long",
+        year:"numeric"
+      });
+    }
 
-  // ========= END SUMMARY =========
-  out+=`\nPROGRAM SUMMARY\n\n`
-  out+=`This training block focused on building aerobic efficiency and technical consistency.\n`
+    function formatDateShort(d){
+      return d.toISOString().slice(0,10);
+    }
 
-  if(intent.test1k) out+=`The program concluded with a 1k test to assess race fitness.\n`
-  if(intent.test5k) out+=`The block ended with a 5k test to benchmark endurance.\n`
-  if(intent.regatta) out+=`The program tapered into a regatta / race scenario.\n`
+    const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-  out+=`Next step: review performance and adjust future training accordingly.\n`
-  out+=`\n“Consistency builds champions.”\n`
+    // ---------- INTRO ----------
+    function buildIntro(meta){
+      const { title, athlete, program, quote } = meta;
+      const start = program.start_date;
+      const end   = program.end_date;
+      const cat   = athlete.category || "Masters";
+      const gender = athlete.gender || "";
+      const intensity = program.intensity_percent ?? 75;
+      const focus = program.focus || "Aerobic base and technical consistency";
 
-  $("#outputDiary").value=out
-  toast("Diary generated")
-}
-</script>
+      const weekly = program.weekly_schedule || {};
+      const weeklyLines = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(
+        d=>`${d} ${weekly[d] || "Rest"}`
+      );
+
+      return [
+        `${title}`,
+        `Dates: ${start} → ${end}`,
+        `Category: ${cat}${gender ? " ("+gender+")" : ""}`,
+        `Intensity Level: ~${intensity}%`,
+        `Primary Focus: ${focus}`,
+        ``,
+        `Weekly Structure:`,
+        ...weeklyLines,
+        ``,
+        `Quote:`,
+        `“${quote}”`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    // ---------- DAY TEMPLATES ----------
+    function templateRest(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `None planned.`,
+        ``,
+        `Main Set:`,
+        `Rest day.`,
+        ``,
+        `Focus:`,
+        `Recovery, sleep and general mobility.`,
+        ``,
+        `Notes:`,
+        `Light walking or gentle stretching is encouraged, but no structured training is required.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateWaterRow(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `10–15 minutes light paddling, building gradually from very easy to steady rowing.`,
+        `Include 3 × 10 stroke builds up to 22–24 spm with plenty of paddling between.`,
+        ``,
+        `Main Set:`,
+        `Option A – continuous:`,
+        `• 40–50 minutes steady rowing.`,
+        ``,
+        `Option B – broken:`,
+        `• 2 × 20–25 minutes with 3 minutes light paddling between pieces.`,
+        `Stroke Rate: 18–22 spm`,
+        `Heart Rate: UT2 to light UT1 (roughly 60–75% HR max).`,
+        ``,
+        `Technical Focus:`,
+        `• Clean, quiet catches with the blade fully loaded before the drive.`,
+        `• Strong leg drive while the upper body stays relaxed and supported.`,
+        `• Level hands at the finish and tidy, consistent tap-down.`,
+        ``,
+        `Focus:`,
+        `Boat run, timing and aerobic efficiency with no rush on the slide.`,
+        ``,
+        `Notes:`,
+        `If conditions are poor, shorten the main set slightly but keep it controlled and safe. Prioritise timing and balance over power.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateWeights(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `5–8 minutes light cardio (row, cycle or treadmill) plus dynamic mobility for hips, hamstrings, shoulders and back.`,
+        ``,
+        `Main Set:`,
+        `Block A`,
+        `• Goblet Squat – 3 × 10`,
+        `• Romanian Deadlift – 3 × 8`,
+        ``,
+        `Block B`,
+        `• Lat Pulldown or Assisted Pull-down – 3 × 10`,
+        `• Dumbbell Bench Press – 3 × 8`,
+        ``,
+        `Block C`,
+        `• Seated or Cable Row – 3 × 10`,
+        `• Front Plank – 3 × 30–40 seconds`,
+        ``,
+        `Rest:`,
+        `60–90 seconds between working sets.`,
+        ``,
+        `Technical Focus:`,
+        `• Neutral spine at all times (no rounding).`,
+        `• Drive from the legs and hips rather than the lower back.`,
+        `• Smooth, controlled lowering phase; strong but not jerky on the way up.`,
+        ``,
+        `Focus:`,
+        `Maintain rowing-specific strength and robustness without creating heavy fatigue.`,
+        ``,
+        `Notes:`,
+        `Choose loads that feel “comfortably hard” on the last 2 reps but always leave 1–2 good reps in reserve.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateErgUT2(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `10 minutes very easy rowing, gradually building from light paddling to a steady UT2 rhythm.`,
+        ``,
+        `Main Set:`,
+        `2 × 40 minutes continuous UT2 rowing.`,
+        `Stroke Rate: 18–20 spm`,
+        `Heart Rate: 60–70% HR max (easy conversational effort).`,
+        `Rest: 3 minutes very light paddling between pieces.`,
+        ``,
+        `Technical Focus:`,
+        `• Long, relaxed stroke with quiet shoulders.`,
+        `• Strong connection through the legs before the body and arms.`,
+        `• Smooth, unhurried recovery with balanced posture on the slide.`,
+        ``,
+        `Focus:`,
+        `Aerobic conditioning and rhythm at approximately 75% effort, without chasing split.`,
+        ``,
+        `Notes:`,
+        `You should always feel that you could continue another 10–15 minutes at the end of each piece.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateErgUT1AT(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `10 minutes light rowing, gradually building from UT2 into the lower end of UT1 (20–22 spm).`,
+        ``,
+        `Main Set:`,
+        `3 × 8–10 minutes at UT1 / AT (comfortably hard).`,
+        `Stroke Rate: 22–26 spm.`,
+        `Rest: 3–4 minutes very light paddling between pieces.`,
+        ``,
+        `Technical Focus:`,
+        `• Powerful but relaxed leg drive; stay tall through the trunk.`,
+        `• Keep the handle speed smooth into and away from the body.`,
+        `• No rushing on the slide, even when the rate is high.`,
+        ``,
+        `Focus:`,
+        `Build threshold fitness while keeping the stroke long and tidy.`,
+        ``,
+        `Notes:`,
+        `You should feel challenged but in control. You should not be completely empty at the end.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    // ---------- SUMMARY AT END ----------
+    function buildSummary(meta){
+      const { athlete, program } = meta;
+      const start = parseISODate(program.start_date);
+      const end   = parseISODate(program.end_date);
+      if (!start || !end) return "";
+
+      const days = Math.round((end - start) / (1000*60*60*24)) + 1;
+      const weekly = program.weekly_schedule || {};
+      const focus  = program.focus || "Aerobic base and technical consistency";
+      const intensity = program.intensity_percent ?? 75;
+      const notes = String(program.notes || "").trim();
+
+      const weeklyLine = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+        .map(d => `${d}: ${weekly[d] || "Rest"}`)
+        .join("; ");
+
+      const summaryLines = [
+        `End-of-Block Summary`,
+        ``,
+        `• Duration: ${days} day(s) from ${program.start_date} to ${program.end_date}.`,
+        `• Athlete: ${athlete.name || "—"} (${athlete.category || "Masters"}${athlete.gender ? ", " + athlete.gender : ""}).`,
+        `• Focus: ${focus}.`,
+        `• Planned intensity: around ${intensity}%.`,
+        `• Weekly pattern: ${weeklyLine}.`
+      ];
+
+      // If notes mention tests or races, add a short contextual line
+      const lower = notes.toLowerCase();
+      if (notes) {
+        if (lower.includes("1k") || lower.includes("2k") || lower.includes("5k") || lower.includes("test")) {
+          summaryLines.push(
+            `• Athlete note: A performance test is planned around the end of this block (“${notes}”). ` +
+            `This program is designed to support that by building aerobic and threshold fitness.`
+          );
+        } else if (lower.includes("regatta") || lower.includes("race") || lower.includes("head") || lower.includes("championship")) {
+          summaryLines.push(
+            `• Athlete note: Upcoming racing mentioned (“${notes}”). Use the final few sessions to focus on good execution and recovery.`
+          );
+        } else {
+          summaryLines.push(`• Athlete note: ${notes}`);
+        }
+      }
+
+      summaryLines.push(
+        ``,
+        `Coach tip: Review how each session felt, especially the harder erg and water days, and adjust the next block based on how well you handled this load.`,
+        ``,
+        `------------------------------------------------------------`
+      );
+
+      return "\n" + summaryLines.join("\n") + "\n";
+    }
+
+    // ---------- DIARY BUILDER ----------
+    function buildDiary(meta){
+      const { program } = meta;
+      const start = parseISODate(program.start_date);
+      const end   = parseISODate(program.end_date);
+
+      if (!start || !end) {
+        throw new Error("start_date and finish_date (or program.start_date/program.end_date) are required.");
+      }
+      if (end < start){
+        throw new Error("end_date / finish_date is before start_date.");
+      }
+
+      const weekly = program.weekly_schedule || {};
+      let out = buildIntro(meta);
+
+      const cur = new Date(start.getTime());
+      while (cur <= end){
+        const dow = DOW[cur.getDay()];  // "Mon", "Tue", ...
+        const session = weekly[dow] || "Rest";
+        const label = `🗓️ ${formatDateLong(cur)} — ${session}`;
+
+        if (/erg\s*\(ut2\)/i.test(session)){
+          out += templateErgUT2(label);
+        } else if (/erg\s*\(ut1\/?at\)/i.test(session)){
+          out += templateErgUT1AT(label);
+        } else if (/water row/i.test(session)){
+          out += templateWaterRow(label);
+        } else if (/weight/i.test(session)){
+          out += templateWeights(label);
+        } else {
+          out += templateRest(label);
+        }
+
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      out += buildSummary(meta);
+
+      return out.trim() + "\n";
+    }
+
+    // ---------- MAIN BUTTON HANDLER ----------
+    $("#generateBtn").addEventListener("click", ()=>{
+      const src = $("#inputJson").value.trim();
+      if (!src){
+        toast("Paste JSON first", false);
+        return;
+      }
+      let raw;
+      try{
+        raw = JSON.parse(src);
+      }catch(e){
+        toast("Invalid JSON: " + e.message, false);
+        return;
+      }
+
+      try{
+        const meta = normalisePayload(raw);
+        if (!meta.program.start_date || !meta.program.end_date){
+          throw new Error("start_date and finish_date (or program.start_date/program.end_date) are required.");
+        }
+        const diary = buildDiary(meta);
+        $("#outputDiary").value = diary;
+        toast("Diary generated ✔");
+      }catch(e){
+        toast(e.message || "Error generating diary", false);
+      }
+    });
+  </script>
 </body>
 </html>
