@@ -248,6 +248,7 @@
     }
 
     const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const ALL_DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
     // ---------- INTRO ----------
     function buildIntro(meta){
@@ -307,7 +308,8 @@
       ].join("\n");
     }
 
-    function templateWaterRow(label){
+    // Steady UT2 / UT1 water
+    function templateWaterUT2(label){
       return [
         `${label}`,
         ``,
@@ -334,6 +336,94 @@
         ``,
         `Notes:`,
         `If conditions are poor, shorten the main set slightly but keep it controlled and safe. Prioritise timing and balance over power.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    // NEW: AT / race-prep water (high rate, harder work)
+    function templateWaterAT(label, athlete){
+      const genderRaw = (athlete && athlete.gender) ? String(athlete.gender).toLowerCase() : "";
+      const isFemale =
+        genderRaw.includes("female") ||
+        genderRaw.includes("woman")  ||
+        genderRaw.includes("women")  ||
+        genderRaw.includes("girl");
+
+      const rateLine = isFemale
+        ? "Stroke Rate: 30–32 spm (Masters women AT)"
+        : "Stroke Rate: 32–34 spm (Masters men AT)";
+
+      const options = [];
+
+      // Set A – 6 × 500 m
+      options.push([
+        `Set A – 6 × 500 m @ AT:`,
+        `• 6 × 500 m at strong but sustainable race pressure.`,
+        `• ${rateLine}.`,
+        `• Rest: 3 minutes light paddling between pieces.`,
+        ``,
+        `Focus for this set:`,
+        `• Commit to the leg drive from the first stroke.`,
+        `• Maintain length – do not shorten as you fatigue.`,
+        `• Keep blades clean on the entry and quiet on the release.`
+      ]);
+
+      // Set B – 3 × 750 m
+      options.push([
+        `Set B – 3 × 750 m @ AT:`,
+        `• 3 × 750 m pieces building from strong base pace into finishing pace in the last 10–15 strokes.`,
+        `• ${rateLine}.`,
+        `• Rest: 3–4 minutes very light paddling between pieces.`,
+        ``,
+        `Focus for this set:`,
+        `• Rhythm in the middle of the piece – no rushing on the slide.`,
+        `• Keep the crew connected through the drive and finishes.`,
+        `• Think “relaxed top half, ruthless legs”.`
+      ]);
+
+      // Set C – 2 × (4 × 250 m) with starts
+      options.push([
+        `Set C – 2 × (4 × 250 m) with race starts:`,
+        `• 2 blocks of 4 × 250 m.`,
+        `• First 10–15 strokes of each 250 m as race start + build, then settle to AT rhythm.`,
+        `• ${rateLine}.`,
+        `• Rest: 90 seconds between 250 m pieces, 4–5 minutes easy paddling between the two blocks.`,
+        ``,
+        `Focus for this set:`,
+        `• Crisp, disciplined start sequence (no yanking).`,
+        `• Quick catches with the boat moving, not stopped.`,
+        `• Hold posture and length even as the rate comes up.`
+      ]);
+
+      const chosen = options[Math.floor(Math.random()*options.length)];
+
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `15–20 minutes building from very light paddling up to firm strokes.`,
+        `Include:`,
+        `• 3 × 10–12 stroke bursts up to AT stroke rate with plenty of easy paddling between.`,
+        `• A few practice starts over 10–15 strokes.`,
+        ``,
+        `Main Set:`,
+        ...chosen,
+        ``,
+        `Heart Rate:`,
+        `• Roughly 80–90% HR max (you should feel challenged but still technical).`,
+        ``,
+        `Technical Focus:`,
+        `• Sequencing: legs, then body, then arms – even when pressure and rate are high.`,
+        `• Stable platform through the feet and core so the hull stays level.`,
+        `• Clean finishes with quick tap-down and direct hands into the recovery.`,
+        ``,
+        `Notes:`,
+        `This is a key AT / race-prep session. Quality matters more than volume – if technique breaks down, reduce the number of pieces rather than chasing more metres.`,
         ``,
         `Athlete Notes:`,
         `_________________________________________________`,
@@ -385,7 +475,19 @@
       ].join("\n");
     }
 
-    function templateErgUT2(label){
+    // UT2 erg now depends on gender (2×20 women, 2×30 men)
+    function templateErgUT2(label, athlete){
+      const genderRaw = (athlete && athlete.gender) ? String(athlete.gender).toLowerCase() : "";
+      const isFemale =
+        genderRaw.includes("female") ||
+        genderRaw.includes("woman")  ||
+        genderRaw.includes("women")  ||
+        genderRaw.includes("girl");
+
+      const mainSetLine = isFemale
+        ? `2 × 20 minutes continuous UT2 rowing.`
+        : `2 × 30 minutes continuous UT2 rowing.`;
+
       return [
         `${label}`,
         ``,
@@ -393,7 +495,7 @@
         `10 minutes very easy rowing, gradually building from light paddling to a steady UT2 rhythm.`,
         ``,
         `Main Set:`,
-        `2 × 40 minutes continuous UT2 rowing.`,
+        mainSetLine,
         `Stroke Rate: 18–20 spm`,
         `Heart Rate: 60–70% HR max (easy conversational effort).`,
         `Rest: 3 minutes very light paddling between pieces.`,
@@ -559,7 +661,7 @@
 
     // ---------- DIARY BUILDER ----------
     function buildDiary(meta){
-      const { program } = meta;
+      const { program, athlete } = meta;
       let start = parseISODate(program.start_date);
       let end   = parseISODate(program.end_date);
 
@@ -581,6 +683,12 @@
       const weekly = program.weekly_schedule || {};
       let out = buildIntro(meta);
 
+      // Figure out which days of week are Water Rows
+      const waterDOWs = ALL_DAYS.filter(d => {
+        const s = weekly[d];
+        return s && /water row/i.test(s);
+      });
+
       const cur = new Date(start.getTime());
       while (cur <= end){
         const dow = DOW[cur.getDay()];  // "Mon", "Tue", ...
@@ -588,11 +696,22 @@
         const label = `🗓️ ${formatDateLong(cur)} — ${session}`;
 
         if (/erg\s*\(ut2\)/i.test(session)){
-          out += templateErgUT2(label);
+          out += templateErgUT2(label, athlete);
         } else if (/erg\s*\(ut1\/?at\)/i.test(session)){
           out += templateErgUT1AT(label);
         } else if (/water row/i.test(session)){
-          out += templateWaterRow(label);
+          if (waterDOWs.length >= 2) {
+            const idx = waterDOWs.indexOf(dow);
+            // First water session of the week = steady UT2,
+            // second (and others) = AT water.
+            if (idx === 0){
+              out += templateWaterUT2(label);
+            } else {
+              out += templateWaterAT(label, athlete);
+            }
+          } else {
+            out += templateWaterUT2(label);
+          }
         } else if (/weight/i.test(session)){
           out += templateWeights(label);
         } else {
