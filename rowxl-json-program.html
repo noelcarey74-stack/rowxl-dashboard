@@ -250,6 +250,19 @@
     const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
     const ALL_DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
+    // Global intensity for the current block (used by templates)
+    let CURRENT_BLOCK_INTENSITY = 75;
+
+    function describeIntensity(pct){
+      const p = Number(pct || 0);
+      if (p <= 30)  return "Very easy / recovery or rehab block";
+      if (p <= 50)  return "Technical and light aerobic focus";
+      if (p <= 70)  return "Steady aerobic development block";
+      if (p <= 85)  return "Hard training block with threshold work";
+      if (p <= 95)  return "Peak block with race-prep and test work";
+      return "Very high intensity block – racing or key testing focus";
+    }
+
     // ---------- INTRO ----------
     function buildIntro(meta){
       const { title, athlete, program, quote } = meta;
@@ -265,11 +278,13 @@
         d=>`${d} ${weekly[d] || "Rest"}`
       );
 
+      const intensityText = describeIntensity(intensity);
+
       return [
         `${title}`,
         `Dates: ${start} → ${end}`,
         `Category: ${cat}${gender ? " ("+gender+")" : ""}`,
-        `Intensity Level: ~${intensity}%`,
+        `Intensity Level: ~${intensity}%${intensityText ? " – " + intensityText : ""}`,
         `Primary Focus: ${focus}`,
         ``,
         `Weekly Structure:`,
@@ -345,7 +360,7 @@
       ].join("\n");
     }
 
-    // NEW: AT / race-prep water (high rate, harder work)
+    // AT / race-prep water (high rate, harder work)
     function templateWaterAT(label, athlete){
       const genderRaw = (athlete && athlete.gender) ? String(athlete.gender).toLowerCase() : "";
       const isFemale =
@@ -386,7 +401,7 @@
         `• Think “relaxed top half, ruthless legs”.`
       ]);
 
-      // Set C – 2 × (4 × 250 m) with starts
+      // Set C – 2 × (4 × 250 m) with race starts
       options.push([
         `Set C – 2 × (4 × 250 m) with race starts:`,
         `• 2 blocks of 4 × 250 m.`,
@@ -433,6 +448,40 @@
       ].join("\n");
     }
 
+    // Technique / drills water session
+    function templateTechniqueDrills(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `10–15 minutes light paddling with rating 18–20 spm, focusing on quiet hands and simple rhythm.`,
+        ``,
+        `Main Set (choose 3–4 drills):`,
+        `• Pick drill: arms only → arms & body → half slide → full slide (3–5 minutes each).`,
+        `• Paused rowing at 1/4 and 1/2 slide to feel posture and connection (3 × 3 minutes).`,
+        `• Square-blade rowing on the feather side to sharpen catches and finishes (2 × 6–8 minutes).`,
+        `• Outside-arm-only rowing to feel suspension and drive through the legs (2 × 4 minutes).`,
+        `• Rate-building pieces: 3 × 4 minutes at 20–22 spm, focusing on length and balance.`,
+        ``,
+        `Technical Focus:`,
+        `• Tall posture, weight on the feet, loose shoulders.`,
+        `• Blade placement: quick and clean into the water with no skying.`,
+        `• Consistent hand heights through the drive and release.`,
+        ``,
+        `Focus:`,
+        `Pure technique. Pressure stays light to moderate so that the crew can make technical changes without fatigue.`,
+        ``,
+        `Notes:`,
+        `If the block intensity is high (~${CURRENT_BLOCK_INTENSITY}%), keep this session low pressure so it supports the harder work on other days.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
     function templateWeights(label){
       return [
         `${label}`,
@@ -440,7 +489,7 @@
         `Warm-up:`,
         `5–8 minutes light cardio (row, cycle or treadmill) plus dynamic mobility for hips, hamstrings, shoulders and back.`,
         ``,
-        `Main Set:`,
+        `Main Set (rowing-specific strength):`,
         `Block A`,
         `• Goblet Squat – 3 × 10`,
         `• Romanian Deadlift – 3 × 8`,
@@ -462,10 +511,89 @@
         `• Smooth, controlled lowering phase; strong but not jerky on the way up.`,
         ``,
         `Focus:`,
-        `Maintain rowing-specific strength and robustness without creating heavy fatigue.`,
+        `Maintain rowing-specific strength and robustness without creating heavy fatigue – this is not bodybuilding.`,
         ``,
         `Notes:`,
-        `Choose loads that feel “comfortably hard” on the last 2 reps but always leave 1–2 good reps in reserve.`,
+        `Choose loads that feel “comfortably hard” on the last 2 reps but always leave 1–2 good reps in reserve, especially in a higher-intensity block (~${CURRENT_BLOCK_INTENSITY}%).`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    // Circuit / HIIT (bodyweight + light load)
+    function templateCircuitHIIT(label){
+      const i = CURRENT_BLOCK_INTENSITY;
+      let work, rest, rounds;
+      if (i <= 50){
+        work = "30 seconds work"; rest = "30–40 seconds rest"; rounds = "2–3";
+      } else if (i <= 75){
+        work = "30–40 seconds work"; rest = "20–30 seconds rest"; rounds = "3–4";
+      } else {
+        work = "40 seconds work"; rest = "20 seconds rest"; rounds = "4";
+      }
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `8–10 minutes light cardio and dynamic mobility (hips, ankles, shoulders, trunk).`,
+        ``,
+        `Main Set (Rowing Conditioning Circuit):`,
+        `${rounds} rounds of:`,
+        `• Goblet Squat or Bodyweight Squat — ${work}`,
+        `• Push-up or Incline Push-up — ${work}`,
+        `• Kettlebell Swing or Hip Hinge — ${work}`,
+        `• Inverted Row / Band Row — ${work}`,
+        `• Plank Variations (front / side) — ${work}`,
+        `• Light erg, bike or skipping — ${work}`,
+        `Rest between exercises: ${rest}.`,
+        ``,
+        `Technical Focus:`,
+        `• Quality of movement first, speed second.`,
+        `• Strong midline (rib cage over hips, no excessive arching).`,
+        `• Land soft on impact exercises; protect knees and lower back.`,
+        ``,
+        `Focus:`,
+        `General conditioning for rowing, respecting the overall block intensity (~${i}%) so that it supports, not replaces, your key rowing sessions.`,
+        ``,
+        `Notes:`,
+        `If fatigue is high or the block is very intense, drop one round and keep movements crisp rather than grinding.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateCore(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `5 minutes light movement (walk, bike or easy erg) plus a few gentle spine flexion/extension and rotation movements.`,
+        ``,
+        `Main Set (Core for Rowers):`,
+        `• Front Plank – 3 × 30–45 seconds.`,
+        `• Side Plank (left + right) – 3 × 20–30 seconds each side.`,
+        `• Dead Bug or Hollow Hold – 3 × 8–10 controlled reps per side.`,
+        `• Bird Dog – 3 × 8–10 controlled reps per side.`,
+        `• Glute Bridge or Hip Thrust – 3 × 12–15 reps.`,
+        ``,
+        `Technical Focus:`,
+        `• Ribs stacked over pelvis, no excessive arching of the lower back.`,
+        `• Smooth breathing; do not hold your breath.`,
+        `• Slow, deliberate control rather than speed.`,
+        ``,
+        `Focus:`,
+        `Build trunk stability to support power transfer in the boat and on the erg, especially important for Masters athletes.`,
+        ``,
+        `Notes:`,
+        `Intensity dial: higher block intensity (~${CURRENT_BLOCK_INTENSITY}%) means core work stays tidy and controlled, not maximal; save your energy for rowing and key sessions.`,
         ``,
         `Athlete Notes:`,
         `_________________________________________________`,
@@ -509,7 +637,7 @@
         `Aerobic conditioning and rhythm at approximately 75% effort, without chasing split.`,
         ``,
         `Notes:`,
-        `You should always feel that you could continue another 10–15 minutes at the end of each piece.`,
+        `Even in a higher-intensity block (~${CURRENT_BLOCK_INTENSITY}%), UT2 should feel controlled and sustainable — you finish each piece knowing you could continue.`,
         ``,
         `Athlete Notes:`,
         `_________________________________________________`,
@@ -540,7 +668,520 @@
         `Build threshold fitness while keeping the stroke long and tidy.`,
         ``,
         `Notes:`,
-        `You should feel challenged but in control. You should not be completely empty at the end.`,
+        `You should feel challenged but in control. In a very hard block (~${CURRENT_BLOCK_INTENSITY}%), use the shorter end of the duration range and keep technique sharp.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    // Erg intervals (shorter pieces)
+    function templateErgIntervals(label){
+      const i = CURRENT_BLOCK_INTENSITY;
+      let blockDesc;
+      let setLines;
+
+      if (i <= 55){
+        blockDesc = "Controlled interval work to support aerobic development without excessive stress.";
+        setLines = [
+          `Main Set:`,
+          `• 2 × 10 minutes as (8 × 45 seconds on / 45 seconds off) at firm pressure.`,
+          `• Stroke Rate: 22–24 spm.`,
+          `• On segments: strong but not maximal; off segments: very light paddling.`,
+          `Rest: 4 minutes light rowing between the two 10-minute blocks.`
+        ];
+      } else if (i <= 80){
+        blockDesc = "Stronger interval work that bridges UT1 and AT, good preparation for tests and racing.";
+        setLines = [
+          `Main Set:`,
+          `• 3 × 8 minutes as (6 × 50 seconds on / 30 seconds off).`,
+          `• Stroke Rate: 24–26 spm.`,
+          `• On segments: just above 2k–5k pace feel; off segments: light but moving.`,
+          `Rest: 4 minutes very light rowing between blocks.`
+        ];
+      } else {
+        blockDesc = "High-intensity interval work. This is serious training and should be placed carefully in the week.";
+        setLines = [
+          `Main Set:`,
+          `• 3 × 6 minutes at AT as (12 × 20 seconds on / 10 seconds off).`,
+          `• Stroke Rate: 26–28 spm.`,
+          `• On segments: close to 2k power; off segments: keep moving, but just enough to clear.`,
+          `Rest: 5 minutes very light rowing between blocks.`
+        ];
+      }
+
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `12–15 minutes building from light paddling to strong strokes, including 3 × 10 stroke bursts up to 24–26 spm.`,
+        ``,
+        ...setLines,
+        ``,
+        `Technical Focus:`,
+        `• Same stroke shape at low and high rate.`,
+        `• Hang off the handle with strong legs; avoid over-pulling with the arms.`,
+        `• Stay loose in the shoulders and jaw as effort increases.`,
+        ``,
+        `Focus:`,
+        blockDesc,
+        ``,
+        `Notes:`,
+        `Match the overall block intensity (~${i}%) — if you are carrying fatigue, trim 1 block or reduce rate slightly rather than forcing it.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    // Bike cross-training
+    function templateBike(label){
+      const i = CURRENT_BLOCK_INTENSITY;
+      let mainLines;
+
+      if (i <= 50){
+        mainLines = [
+          `Main Set:`,
+          `• 35–45 minutes continuous riding at comfortable pace.`,
+          `• Cadence: 85–95 rpm.`,
+          `• You should be able to talk in full sentences (easy–steady).`
+        ];
+      } else if (i <= 80){
+        mainLines = [
+          `Main Set:`,
+          `• 2 × 15 minutes steady riding with 5 minutes easy spin between.`,
+          `• Within each 15 minutes, include 4 × 30 seconds at firmer pressure with 90 seconds easy.`,
+          `• Cadence: 85–95 rpm throughout.`
+        ];
+      } else {
+        mainLines = [
+          `Main Set:`,
+          `• 3 × 8 minutes at firm, controlled effort.`,
+          `• Within each 8 minutes, alternate 1 minute strong / 1 minute steady.`,
+          `• 4–5 minutes very easy pedalling between blocks.`,
+          `• Cadence: 90+ rpm, avoid grinding big gears.`
+        ];
+      }
+
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `10 minutes easy spin, gradually lifting cadence, plus a few short 10–15 second pickups.`,
+        ``,
+        ...mainLines,
+        ``,
+        `Technical Focus:`,
+        `• Smooth circles through the pedals rather than stamping.`,
+        `• Relax the upper body and keep hands light on the bars.`,
+        `• Maintain posture similar to rowing: tall through the torso, not slumped.`,
+        ``,
+        `Focus:`,
+        `Support rowing fitness without beating up the joints — cycling should leave you fresher for water and erg work, especially at intensity ~${i}%.`,
+        ``,
+        `Notes:`,
+        `If you feel any knee or hip discomfort, reduce gear and focus on cadence and smoothness rather than power.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    // Run cross-training
+    function templateRun(label){
+      const i = CURRENT_BLOCK_INTENSITY;
+      let mainLines;
+
+      if (i <= 50){
+        mainLines = [
+          `Main Set:`,
+          `• 25–35 minutes easy jog or walk/jog mix.`,
+          `• You should always be able to talk in full sentences.`,
+          `• Use soft surfaces where possible (grass, track, trail).`
+        ];
+      } else if (i <= 80){
+        mainLines = [
+          `Main Set:`,
+          `• 10 minutes easy jog, then:`,
+          `• 6 × 2 minutes at steady effort / 2 minutes easy jog or walk.`,
+          `• Finish with 5–10 minutes easy jog or brisk walk.`
+        ];
+      } else {
+        mainLines = [
+          `Main Set:`,
+          `• 15 minutes easy jog, then:`,
+          `• 8 × 60 seconds strong / 90 seconds walk or easy jog.`,
+          `• Finish with 8–10 minutes easy jog or walk to cool down.`,
+          `• Keep impact sensible – this is support work for rowing, not a running race.`
+        ];
+      }
+
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `5–10 minutes brisk walk or very easy jog, plus a few light mobility drills for ankles, knees and hips.`,
+        ``,
+        ...mainLines,
+        ``,
+        `Technical Focus:`,
+        `• Soft, quiet foot strikes under your centre of mass.`,
+        `• Upright posture, eyes forward, relaxed arms swinging naturally.`,
+        ``,
+        `Focus:`,
+        `General aerobic conditioning and bone health. Respect that your main sport is rowing — adjust volume as needed when the block intensity is ~${i}%.`,
+        ``,
+        `Notes:`,
+        `If you have any history of lower-limb injury, keep this session shorter and easier, and prioritise off-feet options (bike, swim, SkiErg) when in doubt.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    // Swim cross-training
+    function templateSwim(label){
+      const i = CURRENT_BLOCK_INTENSITY;
+      let mainLines;
+
+      if (i <= 50){
+        mainLines = [
+          `Main Set:`,
+          `• 800–1200 m continuous easy swimming, mixing strokes as comfortable.`,
+          `• Every 3rd length, think about long, relaxed strokes and steady breathing.`
+        ];
+      } else if (i <= 80){
+        mainLines = [
+          `Main Set:`,
+          `• 3 × 8 minutes as: 2 minutes strong freestyle / 2 minutes easy drill or backstroke.`,
+          `• 2–3 minutes easy between blocks.`,
+          `• Total distance roughly 1200–1600 m, depending on pace.`
+        ];
+      } else {
+        mainLines = [
+          `Main Set:`,
+          `• 12 × 50 m freestyle @ strong but controlled pace.`,
+          `• Rest: 20–30 seconds between 50s.`,
+          `• Then 400–600 m easy mixed swim to cool down.`
+        ];
+      }
+
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `200–400 m very easy mixed strokes and drills.`,
+        ``,
+        ...mainLines,
+        ``,
+        `Technical Focus:`,
+        `• Long strokes with good body position (hips high in the water).`,
+        `• Calm, regular breathing.`,
+        ``,
+        `Focus:`,
+        `Low-impact aerobic conditioning and shoulder health to complement rowing, particularly valuable when the block intensity is ~${i}% and legs are tired.`,
+        ``,
+        `Notes:`,
+        `If you are not a confident swimmer, stay well within your comfort zone and favour easy, continuous swimming over any hard efforts.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    // SkiErg
+    function templateSkiErg(label){
+      const i = CURRENT_BLOCK_INTENSITY;
+      let mainLines;
+
+      if (i <= 55){
+        mainLines = [
+          `Main Set:`,
+          `• 3 × 8 minutes continuous SkiErg at steady aerobic effort.`,
+          `• Rest: 2–3 minutes easy between blocks.`
+        ];
+      } else if (i <= 80){
+        mainLines = [
+          `Main Set:`,
+          `• 4 × 6 minutes at firm effort.`,
+          `• Within each 6 minutes: 40 seconds strong / 20 seconds light.`,
+          `• Rest: 3 minutes easy between blocks.`
+        ];
+      } else {
+        mainLines = [
+          `Main Set:`,
+          `• 3 × 8 minutes as: 30 seconds strong / 30 seconds light continuous.`,
+          `• Stroke Rate: allow natural rhythm but keep movements crisp.`,
+          `• Rest: 4 minutes easy between blocks.`
+        ];
+      }
+
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `10 minutes easy SkiErg, gradually building length and pressure.`,
+        ``,
+        ...mainLines,
+        ``,
+        `Technical Focus:`,
+        `• Drive from hips and trunk, not just arms.`,
+        `• Maintain neutral spine; no excessive rounding at the bottom.`,
+        ``,
+        `Focus:`,
+        `Upper-body dominant conditioning that carries over to rowing finishes and trunk control, adjusted for the overall block intensity (~${i}%).`,
+        ``,
+        `Notes:`,
+        `Dial down volume if you feel excessive upper-back or shoulder fatigue; this should support, not replace, rowing work.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    // Recovery & mobility disciplines
+    function templateYoga(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `A few minutes of quiet breathing and very gentle joint circles (neck, shoulders, hips).`,
+        ``,
+        `Main Set:`,
+        `• 20–40 minutes of gentle yoga or guided flow, focusing on hips, hamstrings, thoracic spine and shoulders.`,
+        `• Move within comfortable ranges; no forcing of positions.`,
+        ``,
+        `Technical Focus:`,
+        `• Smooth, unhurried breathing – exhale into stretches.`,
+        `• Keep all sensations in the “comfortable stretch” zone, not sharp pain.`,
+        ``,
+        `Focus:`,
+        `Restore movement and down-regulate the nervous system so you can absorb the harder training days, especially in higher-intensity blocks.`,
+        ``,
+        `Notes:`,
+        `Even if your program intensity is ~${CURRENT_BLOCK_INTENSITY}%, treat this as a low-stress recovery tool – not a workout.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templatePilates(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `5 minutes of easy mobility (cat–camel, hip circles, shoulder rolls).`,
+        ``,
+        `Main Set:`,
+        `• 20–40 minutes of Pilates-based core and control work (mat or reformer).`,
+        `• Emphasis on trunk stability, hip control and breathing.`,
+        ``,
+        `Technical Focus:`,
+        `• Controlled, precise movements with steady breathing.`,
+        `• Think “quality over quantity” – stop well before fatigue breaks form.`,
+        ``,
+        `Focus:`,
+        `Improve body awareness and control to support technical changes in the boat and on the erg.`,
+        ``,
+        `Notes:`,
+        `Keep intensity low to moderate regardless of the block (~${CURRENT_BLOCK_INTENSITY}%). This is about control, not exhaustion.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateMobility(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `A few minutes of easy walking or light cycling to raise temperature slightly.`,
+        ``,
+        `Main Set (20–30 minutes):`,
+        `• Ankles: calf raises, ankle circles and gentle dorsiflexion stretches.`,
+        `• Hips: lunges, hip flexor stretches, deep squat holds with support.`,
+        `• Thoracic spine: open-book rotations, wall slides, gentle twists.`,
+        `• Shoulders: band pull-aparts, doorway stretch, overhead reach.`,
+        ``,
+        `Technical Focus:`,
+        `• Move slowly in and out of stretches; avoid bouncing.`,
+        `• Breathe normally; each exhale allows you to relax deeper.`,
+        ``,
+        `Focus:`,
+        `Maintain the ranges of motion needed for a long rowing stroke and comfortable catch position.`,
+        ``,
+        `Notes:`,
+        `This is always low intensity, even in a high-intensity block (~${CURRENT_BLOCK_INTENSITY}%). Use it to feel better, not more tired.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateActiveRecovery(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `Start with 5–10 minutes of easy movement (walk, very easy bike or erg).`,
+        ``,
+        `Main Set:`,
+        `• 20–30 minutes of very light activity – e.g. easy cycle, walk, or technical paddling only.`,
+        `• Effort stays at or below 60% HR max (pure conversational pace).`,
+        ``,
+        `Technical Focus:`,
+        `• Relax, breathe and let the body move freely.`,
+        ``,
+        `Focus:`,
+        `Promote blood flow and recovery while keeping overall stress very low, especially important when the block is set around ${CURRENT_BLOCK_INTENSITY}%.`,
+        ``,
+        `Notes:`,
+        `If you feel more tired at the end than at the start, you went too hard – back off next time.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templatePhysioRehab(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `Follow the guidance from your physio or medical professional – usually a few minutes of very gentle movement.`,
+        ``,
+        `Main Set:`,
+        `• Complete your prescribed rehab exercises exactly as instructed (sets, reps, tempo).`,
+        `• Avoid adding extra weight or volume beyond the plan.`,
+        ``,
+        `Technical Focus:`,
+        `• Slow, controlled movement in the pain-free range.`,
+        `• Stop if you feel sharp pain, giving way, or anything that feels unsafe.`,
+        ``,
+        `Focus:`,
+        `Return to full training safely. The priority is tissue healing and long-term performance, not short-term fitness.`,
+        ``,
+        `Notes:`,
+        `Block intensity (~${CURRENT_BLOCK_INTENSITY}%) is less important here — rehab rules always win. If rehab is on the plan, other sessions may need to be lighter.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    // Test sessions
+    function templateTest(label, distance){
+      const i = CURRENT_BLOCK_INTENSITY;
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `20–25 minutes total:`,
+        `• 10 minutes easy rowing building to UT1.`,
+        `• 3 × 2 minutes at just below test pace / 2 minutes light.`,
+        `• A few short bursts (10–15 strokes) at or slightly above test pace.`,
+        ``,
+        `Main Set:`,
+        `• ${distance} test on the erg or water (depending on your setup).`,
+        `• Aim for even or slightly negative split – finish strongest.`,
+        ``,
+        `Technical Focus:`,
+        `• Settle quickly into your race rhythm.`,
+        `• Long, connected strokes even as you fatigue.`,
+        `• Keep breathing organised; relax face and shoulders.`,
+        ``,
+        `Focus:`,
+        `Benchmark performance for this block (~${i}% intensity) and gather data for future pacing and planning.`,
+        ``,
+        `Notes:`,
+        `Treat this as a key day. If you feel very flat, consider moving the test by a day rather than forcing a poor result.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateRaceRegatta(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `Follow your agreed race warm-up for the event (typically 20–30 minutes total including builds and a few race-pace bursts).`,
+        ``,
+        `Main Set:`,
+        `• Race pieces as per the regatta schedule.`,
+        ``,
+        `Technical Focus:`,
+        `• Execute the race plan you have practised in training.`,
+        `• Stay composed off the start; length and rhythm first, then pressure.`,
+        ``,
+        `Focus:`,
+        `Deliver your best possible performance today, using the work from this training block (~${CURRENT_BLOCK_INTENSITY}%).`,
+        ``,
+        `Notes:`,
+        `Between races, prioritise hydration, light food and gentle movement. Avoid any extra “training” today – racing is the training.`,
+        ``,
+        `Athlete Notes:`,
+        `_________________________________________________`,
+        ``,
+        `------------------------------------------------------------`,
+        ``
+      ].join("\n");
+    }
+
+    function templateOffTravel(label){
+      return [
+        `${label}`,
+        ``,
+        `Warm-up:`,
+        `None planned – this is primarily a non-training day.`,
+        ``,
+        `Main Set:`,
+        `Off / travel day – no formal training required.`,
+        ``,
+        `Focus:`,
+        `Arrive rested, hydrated and ready for the next training or racing days.`,
+        ``,
+        `Notes:`,
+        `On long journeys, try to stand, walk and gently stretch every 60–90 minutes to keep blood flowing. Keep fluids up and avoid arriving overly stiff.`,
         ``,
         `Athlete Notes:`,
         `_________________________________________________`,
@@ -669,6 +1310,11 @@
         throw new Error("start_date and finish_date (or program.start_date/program.end_date) are required.");
       }
 
+      // Set global intensity for templates
+      CURRENT_BLOCK_INTENSITY = typeof program.intensity_percent === "number"
+        ? program.intensity_percent
+        : 75;
+
       // ✅ Auto-fix if dates are reversed (finish before start)
       if (end < start){
         const tmpDate = start;
@@ -699,6 +1345,8 @@
           out += templateErgUT2(label, athlete);
         } else if (/erg\s*\(ut1\/?at\)/i.test(session)){
           out += templateErgUT1AT(label);
+        } else if (/erg\s*intervals/i.test(session)){
+          out += templateErgIntervals(label);
         } else if (/water row/i.test(session)){
           if (waterDOWs.length >= 2) {
             const idx = waterDOWs.indexOf(dow);
@@ -712,6 +1360,42 @@
           } else {
             out += templateWaterUT2(label);
           }
+        } else if (/technique\/drills/i.test(session)){
+          out += templateTechniqueDrills(label);
+        } else if (/circuit\s*\/\s*hiit/i.test(session)){
+          out += templateCircuitHIIT(label);
+        } else if (/core\b/i.test(session)){
+          out += templateCore(label);
+        } else if (/bike/i.test(session)){
+          out += templateBike(label);
+        } else if (/run\b/i.test(session)){
+          out += templateRun(label);
+        } else if (/swim/i.test(session)){
+          out += templateSwim(label);
+        } else if (/skierg/i.test(session)){
+          out += templateSkiErg(label);
+        } else if (/yoga/i.test(session)){
+          out += templateYoga(label);
+        } else if (/pilates/i.test(session)){
+          out += templatePilates(label);
+        } else if (/mobility\s*\/\s*stretch/i.test(session)){
+          out += templateMobility(label);
+        } else if (/active recovery/i.test(session)){
+          out += templateActiveRecovery(label);
+        } else if (/physio\s*\/\s*rehab/i.test(session)){
+          out += templatePhysioRehab(label);
+        } else if (/test[^0-9]*1k/i.test(session)){
+          out += templateTest(label, "1k");
+        } else if (/test[^0-9]*2k/i.test(session)){
+          out += templateTest(label, "2k");
+        } else if (/test[^0-9]*5k/i.test(session)){
+          out += templateTest(label, "5k");
+        } else if (/test[^0-9]*6k/i.test(session)){
+          out += templateTest(label, "6k");
+        } else if (/race\s*\/\s*regatta/i.test(session)){
+          out += templateRaceRegatta(label);
+        } else if (/off\s*\/\s*travel/i.test(session)){
+          out += templateOffTravel(label);
         } else if (/weight/i.test(session)){
           out += templateWeights(label);
         } else {
